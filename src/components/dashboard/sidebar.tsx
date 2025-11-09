@@ -135,7 +135,7 @@ interface SidebarContentProps {
 
 function SidebarContent({ pathname, onSignOut, session }: SidebarContentProps) {
   return (
-    <>
+    <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="flex items-center h-16 flex-shrink-0 px-4">
         <div className="flex items-center">
@@ -145,8 +145,29 @@ function SidebarContent({ pathname, onSignOut, session }: SidebarContentProps) {
         </div>
       </div>
 
+      {/* User profile - at the top */}
+      <div className="flex-shrink-0 px-4 py-3">
+        <div className="flex items-center gap-3">
+          <div className="flex-shrink-0">
+            <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center">
+              <span className="text-sm font-medium text-white">
+                {session?.user?.name?.charAt(0)?.toUpperCase() || "U"}
+              </span>
+            </div>
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-white truncate">
+              {session?.user?.name || "User"}
+            </p>
+            <p className="text-xs text-blue-200 truncate">
+              {session?.user?.email}
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Navigation */}
-      <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
+      <div className="flex-1 flex flex-col pb-4 overflow-y-auto">
         <nav className="mt-5 flex-1 px-2 space-y-1">
           {navigation.map((item) => {
             const isActive = pathname === item.href;
@@ -181,37 +202,19 @@ function SidebarContent({ pathname, onSignOut, session }: SidebarContentProps) {
         </nav>
       </div>
 
-      {/* User profile */}
-      <div className="flex-shrink-0 flex border-t border-blue-500 p-4">
-        <div className="flex items-center w-full">
-          <div className="flex-shrink-0">
-            <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center">
-              <span className="text-sm font-medium text-white">
-                {session?.user?.name?.charAt(0)?.toUpperCase() || "U"}
-              </span>
-            </div>
-          </div>
-          <div className="ml-3 flex-1">
-            <p className="text-sm font-medium text-white truncate">
-              {session?.user?.name || "User"}
-            </p>
-            <p className="text-xs text-blue-200 truncate">
-              {session?.user?.email}
-            </p>
-          </div>
-          <div className="ml-3 flex-shrink-0">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onSignOut}
-              className="text-white hover:bg-white/10 p-2"
-              title="Logout"
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+      {/* Logout button - at the bottom */}
+      <div className="flex-shrink-0 border-t border-blue-500 py-3 px-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onSignOut}
+          className="w-full justify-start text-white hover:bg-white/10"
+          title="Logout"
+        >
+          <LogOut className="h-4 w-4 mr-2" />
+          Logout
+        </Button>
       </div>
-    </>
+    </div>
   );
 }
