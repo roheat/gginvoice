@@ -29,7 +29,7 @@ export type UserStats = {
   totalRevenue: number;
 };
 
-export type InvoiceStatus = "DRAFT" | "SENT" | "PAID" | "OVERDUE";
+export type InvoiceStatus = "DRAFT" | "SENT" | "PAID" | "REFUNDED" | "OVERDUE";
 
 export type SubscriptionStatus = "TRIAL" | "ACTIVE" | "CANCELED";
 

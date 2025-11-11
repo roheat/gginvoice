@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { db } from "@/lib/db";
 import { headers } from "next/headers";
+import { InvoiceStatus } from "@prisma/client";
 
 export async function POST(request: NextRequest) {
   try {
@@ -104,7 +105,7 @@ async function handlePaymentSucceeded(paymentIntent: {
     await db.invoice.update({
       where: { id: invoiceId },
       data: {
-        status: "PAID",
+        status: InvoiceStatus.PAID,
         paidAt: new Date(),
       },
     });

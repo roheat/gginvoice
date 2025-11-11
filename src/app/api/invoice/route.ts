@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
       items: Array<{
         description: string;
         amount: number;
+        quantity?: number;
       }>;
       tax1Name?: string;
       tax1Rate?: number;
@@ -50,10 +51,9 @@ export async function POST(request: NextRequest) {
         shareId: `share-${Date.now()}`,
         number,
         date: new Date(date),
-        status: "DRAFT",
-        subtotal: items.reduce((sum: number, item) => sum + item.amount, 0),
+        subtotal: items.reduce((sum: number, item) => sum + (Number(item.amount) * (item.quantity || 1)), 0),
         tax: 0,
-        total: items.reduce((sum: number, item) => sum + item.amount, 0),
+        total: items.reduce((sum: number, item) => sum + (Number(item.amount) * (item.quantity || 1)), 0),
         currency: "USD",
         notes: notes || null,
         discount: discountValue || 0,
@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
           create: items.map((item) => ({
             description: item.description,
             amount: item.amount,
+            quantity: item.quantity || 1,
           })),
         },
       },
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     // Get the current session
     const session = await getServerSession(authOptions);
@@ -103,11 +104,33 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get all invoices for the user
+    // Parse status query parameter
+    const status = request.nextUrl.searchParams.get("status") ?? "ALL";
+
+    // Build where clause based on status filter
+    type WhereClause = {
+      userId: string;
+      deleted?: boolean;
+      status?: string;
+    };
+    
+    const where: WhereClause = { userId: session.user.id };
+
+    if (status === "DELETED") {
+      // Show only deleted invoices
+      where.deleted = true;
+    } else {
+      // Show only non-deleted invoices
+      where.deleted = false;
+      // If status is specified and not "ALL", filter by status
+      if (status !== "ALL") {
+        where.status = status.toUpperCase();
+      }
+    }
+
+    // Get filtered invoices for the user
     const invoices = await db.invoice.findMany({
-      where: {
-        userId: session.user.id,
-      },
+      where,
       include: {
         client: true,
         items: true,

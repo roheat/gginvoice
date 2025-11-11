@@ -13,6 +13,7 @@ interface InvoiceItem {
   id: string;
   description: string;
   amount: number;
+  quantity: number;
 }
 
 interface Client {

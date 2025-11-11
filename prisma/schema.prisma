@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -16,17 +13,110 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+}
+
+model Client {
+  id        String    @id @default(cuid())
+  name      String
+  email     String?
+  address   String?
+  phone     String?
+  userId    String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoices  Invoice[]
+
+  @@index([userId])
+}
+
+model Invoice {
+  id             String         @id @default(cuid())
+  shareId        String         @unique
+  number         String
+  date           DateTime       @default(now())
+  dueDate        DateTime?
+  subtotal       Decimal        @default(0)
+  total          Decimal        @default(0)
+  currency       String         @default("USD")
+  notes          String?
+  discount       Decimal        @default(0)
+  discountType   String         @default("PERCENTAGE")
+  clientId       String
+  userId         String
+  sentAt         DateTime?
+  paidAt         DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime @updatedAt
+  tax            Decimal        @default(0)
+  tax1Name       String?
+  tax1Rate       Decimal        @default(0)
+  tax2Name       String?
+  tax2Rate       Decimal        @default(0)
+  acceptPayments Boolean        @default(false)
+  deleted        Boolean        @default(false)
+  refundedAt     DateTime?
+  paidVia        String?
+  paymentRef     String?
+  refundRef      String?
+  status         InvoiceStatus  @default(DRAFT)
+  client         Client         @relation(fields: [clientId], references: [id])
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events         InvoiceEvent[]
+  items          InvoiceItem[]
+  payments       Payment[]
+
+  @@index([shareId])
+  @@index([userId])
+}
+
+model InvoiceEvent {
+  id        String   @id @default(cuid())
+  invoiceId String
+  type      String
+  actorId   String?
+  ref       String?
+  notes     String?
+  createdAt DateTime @default(now())
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([invoiceId])
+}
+
+model InvoiceItem {
+  id          String   @id @default(cuid())
+  description String
+  amount      Decimal
+  quantity    Int      @default(1)
+  invoiceId   String
+  createdAt   DateTime @default(now())
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id              String   @id @default(cuid())
+  amount          Decimal
+  currency        String   @default("USD")
+  stripePaymentId String   @unique
+  status          String
+  paymentMethod   String
+  invoiceId       String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  invoice         Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
 }
 
 model Session {
@@ -38,31 +128,42 @@ model Session {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
-  accounts      Account[]
-  sessions      Session[]
-
-  // Business fields
-  company            String?
-  trialEnds          DateTime @default(dbgenerated("NOW() + INTERVAL '14 days'"))
-  subscriptionStatus String   @default("TRIAL") // TRIAL, ACTIVE, CANCELED
-
-  // Stripe fields
+  id                       String        @id @default(cuid())
+  name                     String?
+  email                    String        @unique
+  emailVerified            DateTime?
+  image                    String?
+  company                  String?
+  trialEnds                DateTime      @default(dbgenerated("(now() + '14 days'::interval)"))
+  subscriptionStatus       String        @default("TRIAL")
+  createdAt                DateTime      @default(now())
+  updatedAt                DateTime @updatedAt
   stripeAccountId          String?
-  stripeAccountStatus      String  @default("DISCONNECTED") // DISCONNECTED, PENDING, CONNECTED
-  stripeOnboardingComplete Boolean @default(false)
+  stripeAccountStatus      String        @default("DISCONNECTED")
+  stripeOnboardingComplete Boolean       @default(false)
+  accounts                 Account[]
+  clients                  Client[]
+  invoices                 Invoice[]
+  sessions                 Session[]
+  settings                 UserSettings?
+}
 
-  // Relations
-  invoices Invoice[]
-  clients  Client[]
-  settings UserSettings?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model UserSettings {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  defaultCurrency    String   @default("USD")
+  defaultTaxRate     Decimal  @default(0)
+  invoicePrefix      String   @default("INV")
+  nextInvoiceNumber  Int      @default(1)
+  companyName        String?
+  companyAddress     String?
+  companyPhone       String?
+  companyEmail       String?
+  companyWebsite     String?
+  emailNotifications Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model VerificationToken {
@@ -73,113 +174,10 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-model Client {
-  id       String    @id @default(cuid())
-  name     String
-  email    String?
-  address  String?
-  phone    String?
-  userId   String
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  invoices Invoice[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([userId])
-}
-
-model Invoice {
-  id      String    @id @default(cuid())
-  shareId String    @unique @default(cuid()) // For public sharing
-  number  String
-  date    DateTime  @default(now())
-  dueDate DateTime?
-  status  String    @default("DRAFT") // DRAFT, SENT, PAID, OVERDUE
-
-  subtotal     Decimal @default(0)
-  tax          Decimal @default(0)
-  total        Decimal @default(0)
-  currency     String  @default("USD")
-  notes        String?
-  discount     Decimal @default(0)
-  discountType String  @default("PERCENTAGE") // PERCENTAGE, AMOUNT
-
-  // Tax fields
-  tax1Name String?
-  tax1Rate Decimal @default(0)
-  tax2Name String?
-  tax2Rate Decimal @default(0)
-
-  // Payment fields
-  acceptPayments Boolean @default(false)
-
-  clientId String
-  client   Client @relation(fields: [clientId], references: [id])
-  userId   String
-  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  items    InvoiceItem[]
-  payments Payment[]
-  sentAt   DateTime?
-  paidAt   DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([userId])
-  @@index([shareId])
-}
-
-model InvoiceItem {
-  id          String  @id @default(cuid())
-  description String
-  amount      Decimal
-
-  invoiceId String
-  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-}
-
-model UserSettings {
-  id     String @id @default(cuid())
-  userId String @unique
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Invoice settings
-  defaultCurrency   String  @default("USD")
-  defaultTaxRate    Decimal @default(0)
-  invoicePrefix     String  @default("INV")
-  nextInvoiceNumber Int     @default(1)
-
-  // Company settings
-  companyName    String?
-  companyAddress String?
-  companyPhone   String?
-  companyEmail   String?
-  companyWebsite String?
-
-  // Notification settings
-  emailNotifications Boolean @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Payment {
-  id              String  @id @default(cuid())
-  amount          Decimal
-  currency        String  @default("USD")
-  stripePaymentId String  @unique
-  status          String // succeeded, pending, failed
-  paymentMethod   String // card details summary
-
-  invoiceId String
-  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([invoiceId])
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  REFUNDED
+  OVERDUE
 }

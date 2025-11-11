@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "@/lib/trpc";
+import { InvoiceStatus } from "@prisma/client";
 
 export const userRouter = router({
   getProfile: protectedProcedure.query(async ({ ctx }) => {
@@ -39,13 +40,13 @@ export const userRouter = router({
       ctx.db.invoice.count({
         where: {
           userId: ctx.session.user.id,
-          status: "PAID",
+          status: InvoiceStatus.PAID,
         },
       }),
       ctx.db.invoice.aggregate({
         where: {
           userId: ctx.session.user.id,
-          status: "PAID",
+          status: InvoiceStatus.PAID,
         },
         _sum: {
           total: true,

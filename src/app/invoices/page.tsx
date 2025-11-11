@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { MainContent } from "@/components/dashboard/main-content";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2, Eye, Download } from "lucide-react";
+import { Plus, Edit, Eye } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
   Table,
@@ -24,6 +24,7 @@ interface Invoice {
   status: string;
   total: number;
   currency: string;
+  deleted?: boolean;
   client: {
     name: string;
   };
@@ -33,11 +34,12 @@ interface Invoice {
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
   useEffect(() => {
     const fetchInvoices = async () => {
       try {
-        const response = await fetch("/api/invoice");
+        const response = await fetch(`/api/invoice?status=${encodeURIComponent(statusFilter)}`);
         const result = await response.json();
         if (result.success) {
           setInvoices(result.invoices);
@@ -50,7 +52,10 @@ export default function InvoicesPage() {
     };
 
     fetchInvoices();
-  }, []);
+  }, [statusFilter]);
+
+  // Invoices are now filtered by the backend, no client-side filtering needed
+  const filteredInvoices = invoices;
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -60,25 +65,12 @@ export default function InvoicesPage() {
         return "bg-blue-100 text-blue-800";
       case "draft":
         return "bg-gray-100 text-gray-800";
+      case "refunded":
+        return "bg-amber-100 text-amber-800";
       case "overdue":
         return "bg-red-100 text-red-800";
       default:
         return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const handleDeleteInvoice = async (invoiceId: string) => {
-    if (confirm("Are you sure you want to delete this invoice?")) {
-      try {
-        const response = await fetch(`/api/invoice/${invoiceId}`, {
-          method: "DELETE",
-        });
-        if (response.ok) {
-          setInvoices(invoices.filter((invoice) => invoice.id !== invoiceId));
-        }
-      } catch (error) {
-        console.error("Failed to delete invoice:", error);
-      }
     }
   };
 
@@ -93,90 +85,35 @@ export default function InvoicesPage() {
         }}
       />
       <MainContent>
-        <div className="max-w-7xl mx-auto space-y-6">
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card>
-              <CardContent className="px-6">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <div className="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center">
-                      <span className="text-blue-600 font-semibold">$</span>
-                    </div>
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-500">
-                      Total Revenue
-                    </p>
-                    <p className="text-2xl font-semibold text-gray-900">
-                      $
-                      {invoices
-                        .reduce((sum, inv) => sum + Number(inv.total), 0)
-                        .toFixed(2)}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+        <div className="max-w-7xl mx-auto space-y-3">
 
-            <Card>
-              <CardContent className="px-6">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <div className="w-8 h-8 bg-green-100 rounded-md flex items-center justify-center">
-                      <span className="text-green-600 font-semibold">✓</span>
-                    </div>
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-500">
-                      Paid Invoices
-                    </p>
-                    <p className="text-2xl font-semibold text-gray-900">
-                      {
-                        invoices.filter(
-                          (inv) => inv.status.toLowerCase() === "paid"
-                        ).length
-                      }
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="px-6">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <div className="w-8 h-8 bg-yellow-100 rounded-md flex items-center justify-center">
-                      <span className="text-yellow-600 font-semibold">!</span>
-                    </div>
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-500">Pending</p>
-                    <p className="text-2xl font-semibold text-gray-900">
-                      {
-                        invoices.filter(
-                          (inv) => inv.status.toLowerCase() === "sent"
-                        ).length
-                      }
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          {/* Filter Bar */}
+          <div className="flex gap-0">
+            {['ALL', 'DRAFT', 'SENT', 'PAID', 'REFUNDED', 'OVERDUE', 'DELETED'].map((status) => (
+              <Button
+                key={status}
+                variant="ghost"
+                size="sm"
+                onClick={() => setStatusFilter(status)}
+                className={`w-24 border border-gray-200 -ml-px first:ml-0 first:rounded-l-lg last:rounded-r-lg rounded-none last:rounded-r-lg first:rounded-l-lg ${
+                  statusFilter === status
+                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    : "bg-white text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                {status}
+              </Button>
+            ))}
           </div>
 
           {/* Invoices Table */}
           <Card>
-            <CardHeader>
-              <CardTitle>All Invoices ({invoices.length})</CardTitle>
-            </CardHeader>
             <CardContent>
               {loading ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="text-gray-500">Loading invoices...</div>
                 </div>
-              ) : invoices.length === 0 ? (
+              ) : filteredInvoices.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <div className="text-gray-400 mb-4">
                     <svg
@@ -194,17 +131,19 @@ export default function InvoicesPage() {
                     </svg>
                   </div>
                   <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    No invoices yet
+                    {statusFilter === "ALL" ? "No invoices yet" : `No ${statusFilter.toLowerCase()} invoices`}
                   </h3>
                   <p className="text-gray-500 mb-4">
-                    Get started by creating your first invoice.
+                    {statusFilter === "ALL" ? "Get started by creating your first invoice." : `There are no invoices with ${statusFilter.toLowerCase()} status.`}
                   </p>
-                  <Button
-                    onClick={() => (window.location.href = "/invoices/new")}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Your First Invoice
-                  </Button>
+                  {statusFilter === "ALL" && (
+                    <Button
+                      onClick={() => (window.location.href = "/invoices/new")}
+                    >
+                      <Plus className="h-4 w-4" />
+                      Create Your First Invoice
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <Table>
@@ -219,69 +158,58 @@ export default function InvoicesPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {invoices.map((invoice) => (
-                      <TableRow key={invoice.id}>
-                        <TableCell className="font-medium">
-                          {invoice.number}
-                        </TableCell>
-                        <TableCell>{invoice.client.name}</TableCell>
-                        <TableCell>
-                          {new Date(invoice.date).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell>
-                          <span
-                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
-                              invoice.status
-                            )}`}
-                          >
-                            {invoice.status}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          {invoice.currency} {Number(invoice.total).toFixed(2)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end space-x-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                window.open(
-                                  `/invoices/${invoice.shareId}`,
-                                  "_blank"
-                                )
-                              }
-                              title="View invoice"
+                    {filteredInvoices.map((invoice) => (
+                        <TableRow key={invoice.id}>
+                          <TableCell className="font-medium">
+                            {invoice.number}
+                          </TableCell>
+                          <TableCell>{invoice.client.name}</TableCell>
+                          <TableCell>
+                            {new Date(invoice.date).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>
+                            <span
+                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-md ${getStatusColor(
+                                invoice.status
+                              )}`}
                             >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              title="Download PDF"
-                            >
-                              <Download className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              title="Edit invoice"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteInvoice(invoice.id)}
-                              className="text-red-600 hover:text-red-700"
-                              title="Delete invoice"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                              {invoice.status}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            {invoice.currency} {Number(invoice.total).toFixed(2)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-0">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  window.open(
+                                    `/invoices/${invoice.shareId}`,
+                                    "_blank"
+                                  )
+                                }
+                                className="border border-gray-200 -mr-px rounded-l-md rounded-r-none bg-white text-gray-700 hover:bg-gray-50"
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                View
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  window.location.href = `/invoices/${invoice.id}/edit`
+                                }
+                                className="border border-gray-200 rounded-r-md rounded-l-none bg-white text-gray-700 hover:bg-gray-50"
+                              >
+                                <Edit className="h-4 w-4 mr-1" />
+                                Edit
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
                   </TableBody>
                 </Table>
               )}

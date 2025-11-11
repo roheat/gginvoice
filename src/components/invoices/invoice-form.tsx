@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,40 +14,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+// per-item quantity toggle handled in each InvoiceItem
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Plus, CreditCard, AlertCircle } from "lucide-react";
 import { CalculationsPanel } from "./calculations-panel";
 import { ClientSection } from "./client-section";
-import { InvoiceItem } from "./invoice-item";
-// import { trpc } from "@/components/providers/trpc-provider";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { InvoiceItem, InvoiceItemData } from "./invoice-item";
+import { useInvoiceForm, InitialInvoice } from "@/hooks/use-invoice-form";
 
-interface InvoiceFormData {
-  clientId: string;
-  clientName: string;
-  clientEmail: string;
-  clientAddress: string;
-  invoiceNumber: string;
-  date: string;
-  currency: string;
-  language: string;
-  items: InvoiceItemData[];
-  notes: string;
-  discountType: "percentage" | "amount";
-  discountValue: number;
-  tax1Name: string;
-  tax1Rate: number;
-  tax2Name: string;
-  tax2Rate: number;
-  acceptCreditCards: boolean;
-}
+ 
 
-interface InvoiceItemData {
-  id: string;
-  description: string;
-  amount: number;
-}
+// InvoiceItemData imported from invoice-item.tsx
 
 const CURRENCIES = [
   { value: "USD", label: "USD - US Dollar" },
@@ -63,280 +40,40 @@ const LANGUAGES = [
   { value: "de", label: "German" },
 ];
 
-export function InvoiceForm() {
+interface InvoiceFormProps {
+  initialInvoice?: InitialInvoice;
+  isEditing?: boolean;
+  invoiceActions?: React.ReactNode;
+}
+
+export function InvoiceForm({ initialInvoice, isEditing = false, invoiceActions }: InvoiceFormProps) {
+  const {
+    formData,
+    setFormData,
+    isSubmitting,
+    showNewClientForm,
+    stripeConnected,
+    isFinancialFieldsLocked,
+    clients,
+    addItem,
+    removeItem,
+    duplicateItem,
+    handleItemChange,
+    isDirty,
+    calculateSubtotal,
+    calculateDiscount,
+    calculateTax,
+    calculateTotal,
+    handleSubmit,
+    handleClientSelect,
+    handleNewClientSubmit,
+  } = useInvoiceForm({ initialInvoice, isEditing });
   const router = useRouter();
-  const [formData, setFormData] = useState<InvoiceFormData>({
-    clientId: "",
-    clientName: "",
-    clientEmail: "",
-    clientAddress: "",
-    invoiceNumber: "",
-    date: new Date().toISOString().split("T")[0],
-    currency: "USD",
-    language: "en",
-    items: [{ id: "1", description: "", amount: 0 }],
-    notes: "",
-    discountType: "percentage",
-    discountValue: 0,
-    tax1Name: "",
-    tax1Rate: 0,
-    tax2Name: "",
-    tax2Rate: 0,
-    acceptCreditCards: false,
-  });
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showNewClientForm, setShowNewClientForm] = useState(false);
-  const [stripeConnected, setStripeConnected] = useState(false);
-
-  // Direct API calls for all operations
-  const [nextInvoiceNumber, setNextInvoiceNumber] = useState("INV-001");
-
-  // Direct API calls for clients
-  const [clients, setClients] = useState<
-    Array<{
-      id: string;
-      name: string;
-      email: string | null;
-      address: string | null;
-    }>
-  >([]);
-
-  // Set invoice number when available
-  useEffect(() => {
-    setFormData((prev) => ({ ...prev, invoiceNumber: nextInvoiceNumber }));
-  }, [nextInvoiceNumber]);
-
-  // Fetch Stripe connection status
-  const fetchStripeStatus = async () => {
-    try {
-      const response = await fetch("/api/stripe/status");
-      const data = await response.json();
-
-      if (data.success) {
-        setStripeConnected(data.connected);
-      }
-    } catch (error) {
-      console.error("Error fetching Stripe status:", error);
-    }
-  };
-
-  // Fetch clients and invoice number on component mount
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch clients
-        const clientsResponse = await fetch("/api/clients");
-        const clientsResult = await clientsResponse.json();
-
-        if (clientsResult.success) {
-          setClients(clientsResult.clients);
-        }
-
-        // Fetch invoice number
-        const invoiceResponse = await fetch("/api/invoice-number");
-        const invoiceResult = await invoiceResponse.json();
-
-        if (invoiceResult.success) {
-          setNextInvoiceNumber(invoiceResult.number);
-        }
-
-        // Fetch Stripe status
-        await fetchStripeStatus();
-      } catch (error) {
-        console.error("Failed to fetch data:", error);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  const handleClientSelect = (clientId: string) => {
-    if (clientId === "new") {
-      setShowNewClientForm(true);
-      setFormData((prev) => ({ ...prev, clientId: "" }));
-    } else {
-      setShowNewClientForm(false);
-      const client = clients?.find((c) => c.id === clientId);
-      if (client) {
-        setFormData((prev) => ({
-          ...prev,
-          clientId: client.id,
-          clientName: client.name,
-          clientEmail: client.email || "",
-          clientAddress: client.address || "",
-        }));
-      }
-    }
-  };
-
-  const handleNewClientSubmit = async () => {
-    if (!formData.clientName || !formData.clientEmail) {
-      toast.error("Please fill in all required client fields");
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/clients", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: formData.clientName,
-          email: formData.clientEmail,
-          address: formData.clientAddress,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || "Failed to create client");
-      }
-
-      setFormData((prev) => ({ ...prev, clientId: result.client.id }));
-      setShowNewClientForm(false);
-
-      // Refresh clients list
-      const refreshResponse = await fetch("/api/clients");
-      const refreshResult = await refreshResponse.json();
-      if (refreshResult.success) {
-        setClients(refreshResult.clients);
-      }
-
-      toast.success("Client created successfully");
-    } catch (error) {
-      console.error("Client creation error:", error);
-      toast.error("Failed to create client");
-    }
-  };
-
-  const handleItemChange = (
-    index: number,
-    field: keyof InvoiceItemData,
-    value: string | number
-  ) => {
-    const newItems = [...formData.items];
-    newItems[index] = { ...newItems[index], [field]: value };
-    setFormData((prev) => ({ ...prev, items: newItems }));
-  };
-
-  const addItem = () => {
-    const newItem: InvoiceItemData = {
-      id: Date.now().toString(),
-      description: "",
-      amount: 0,
-    };
-    setFormData((prev) => ({ ...prev, items: [...prev.items, newItem] }));
-  };
-
-  const removeItem = (index: number) => {
-    if (formData.items.length > 1) {
-      const newItems = formData.items.filter((_, i) => i !== index);
-      setFormData((prev) => ({ ...prev, items: newItems }));
-    }
-  };
-
-  const duplicateItem = (index: number) => {
-    const itemToDuplicate = formData.items[index];
-    const newItem: InvoiceItemData = {
-      ...itemToDuplicate,
-      id: Date.now().toString(),
-    };
-    const newItems = [...formData.items];
-    newItems.splice(index + 1, 0, newItem);
-    setFormData((prev) => ({ ...prev, items: newItems }));
-  };
-
-  const calculateSubtotal = () => {
-    return formData.items.reduce((sum, item) => sum + item.amount, 0);
-  };
-
-  const calculateDiscount = () => {
-    const subtotal = calculateSubtotal();
-    if (formData.discountType === "percentage") {
-      return (subtotal * formData.discountValue) / 100;
-    }
-    return formData.discountValue;
-  };
-
-  const calculateTax = (rate: number) => {
-    const subtotal = calculateSubtotal();
-    const discount = calculateDiscount();
-    return ((subtotal - discount) * rate) / 100;
-  };
-
-  const calculateTotal = () => {
-    const subtotal = calculateSubtotal();
-    const discount = calculateDiscount();
-    const tax1 = calculateTax(formData.tax1Rate);
-    const tax2 = calculateTax(formData.tax2Rate);
-    return subtotal - discount + tax1 + tax2;
-  };
-
-  const handleSubmit = async (action: "draft" | "send") => {
-    if (!formData.clientId) {
-      toast.error("Please select or create a client");
-      return;
-    }
-
-    if (formData.items.some((item) => !item.description || item.amount <= 0)) {
-      toast.error("Please fill in all item details");
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      const response = await fetch("/api/invoice", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          clientId: formData.clientId,
-          number: formData.invoiceNumber,
-          date: formData.date,
-          notes: formData.notes,
-          items: formData.items.map((item) => ({
-            description: item.description,
-            amount: item.amount,
-          })),
-          tax1Name: formData.tax1Name,
-          tax1Rate: formData.tax1Rate,
-          tax2Name: formData.tax2Name,
-          tax2Rate: formData.tax2Rate,
-          discountType: formData.discountType,
-          discountValue: formData.discountValue,
-          acceptCreditCards: formData.acceptCreditCards,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || "Failed to create invoice");
-      }
-
-      toast.success(
-        `Invoice ${
-          action === "draft" ? "saved as draft" : "created and sent"
-        } successfully`
-      );
-      router.push("/invoices");
-    } catch (error) {
-      console.error("Invoice creation error:", error);
-      toast.error("Failed to create invoice");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex gap-8">
       {/* Main Form */}
-      <div className="lg:col-span-2 space-y-6">
+      <div className="flex-1 space-y-6 pb-8">
         {/* Client Section */}
         <ClientSection
           clients={clients || []}
@@ -357,9 +94,35 @@ export function InvoiceForm() {
         {/* Items Section */}
         <Card>
           <CardHeader>
-            <CardTitle>Invoice Items</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>Invoice Items</CardTitle>
+              <div className="flex items-center gap-3">
+                {isFinancialFieldsLocked && (
+                  <div className="px-2 py-1 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800 font-medium">
+                    🔒 Locked (Invoice Sent)
+                  </div>
+                )}
+              </div>
+              <Button
+                type="button"
+                variant="default"
+                onClick={addItem}
+                disabled={isFinancialFieldsLocked}
+              >
+                <Plus className="h-4 w-4" />
+                Add Item
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
+            {isFinancialFieldsLocked && (
+              <Alert className="border-yellow-200 bg-yellow-50">
+                <AlertCircle className="h-4 w-4 text-yellow-600" />
+                <AlertDescription className="text-yellow-800">
+                  Financial fields are locked because this invoice has been sent. You can only edit notes and due date.
+                </AlertDescription>
+              </Alert>
+            )}
             {formData.items.map((item, index) => (
               <InvoiceItem
                 key={item.id}
@@ -367,22 +130,15 @@ export function InvoiceForm() {
                 index={index}
                 onChange={(
                   field: keyof InvoiceItemData,
-                  value: string | number
+                  value: string | number | boolean
                 ) => handleItemChange(index, field, value)}
                 onRemove={() => removeItem(index)}
                 onDuplicate={() => duplicateItem(index)}
                 canRemove={formData.items.length > 1}
+                disabled={isFinancialFieldsLocked}
+                showQuantity={item.showQuantity ?? false}
               />
             ))}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={addItem}
-              className="w-full"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Item
-            </Button>
           </CardContent>
         </Card>
 
@@ -394,9 +150,9 @@ export function InvoiceForm() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="col-span-1">
-                <Label htmlFor="date">Date</Label>
+                <Label htmlFor="dueDate">Due Date</Label>
                 <Input
-                  id="date"
+                  id="dueDate"
                   type="date"
                   value={formData.date}
                   onChange={(e) =>
@@ -405,14 +161,15 @@ export function InvoiceForm() {
                 />
               </div>
               <div className="col-span-1">
-                <Label htmlFor="currency">Currency</Label>
+                <Label htmlFor="currency">Currency {isFinancialFieldsLocked && "🔒"}</Label>
                 <Select
                   value={formData.currency}
                   onValueChange={(value) =>
                     setFormData((prev) => ({ ...prev, currency: value }))
                   }
+                  disabled={isFinancialFieldsLocked}
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="w-full" disabled={isFinancialFieldsLocked}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -470,12 +227,13 @@ export function InvoiceForm() {
 
             {/* Discount */}
             <div>
-              <Label htmlFor="discount">Discount (optional)</Label>
+              <Label htmlFor="discount">Discount (optional) {isFinancialFieldsLocked && "🔒"}</Label>
               <div className="flex items-center space-x-3 mt-2">
                 <Input
                   id="discount"
                   type="number"
                   placeholder="0"
+                  disabled={isFinancialFieldsLocked}
                   value={
                     formData.discountValue === 0 ? "" : formData.discountValue
                   }
@@ -490,6 +248,7 @@ export function InvoiceForm() {
                 <div className="flex items-center space-x-1 bg-gray-100 rounded-md p-1">
                   <button
                     type="button"
+                    disabled={isFinancialFieldsLocked}
                     onClick={() =>
                       setFormData((prev) => ({
                         ...prev,
@@ -500,12 +259,13 @@ export function InvoiceForm() {
                       formData.discountType === "percentage"
                         ? "bg-white shadow-sm text-gray-900"
                         : "text-gray-600 hover:text-gray-900"
-                    }`}
+                    } ${isFinancialFieldsLocked ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
                     %
                   </button>
                   <button
                     type="button"
+                    disabled={isFinancialFieldsLocked}
                     onClick={() =>
                       setFormData((prev) => ({
                         ...prev,
@@ -516,7 +276,7 @@ export function InvoiceForm() {
                       formData.discountType === "amount"
                         ? "bg-white shadow-sm text-gray-900"
                         : "text-gray-600 hover:text-gray-900"
-                    }`}
+                    } ${isFinancialFieldsLocked ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
                     $
                   </button>
@@ -527,11 +287,12 @@ export function InvoiceForm() {
             {/* Tax */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="tax1Name">Sales Tax (optional)</Label>
+                <Label htmlFor="tax1Name">Sales Tax (optional) {isFinancialFieldsLocked && "🔒"}</Label>
                 <div className="flex items-center space-x-2 mt-2">
                   <Input
                     id="tax1Name"
                     placeholder="Tax Name (Tax ID)"
+                    disabled={isFinancialFieldsLocked}
                     value={formData.tax1Name}
                     onChange={(e) =>
                       setFormData((prev) => ({
@@ -543,6 +304,7 @@ export function InvoiceForm() {
                   <Input
                     type="number"
                     placeholder="0.0000"
+                    disabled={isFinancialFieldsLocked}
                     value={formData.tax1Rate === 0 ? "" : formData.tax1Rate}
                     onChange={(e) =>
                       setFormData((prev) => ({
@@ -554,12 +316,15 @@ export function InvoiceForm() {
                   <span className="text-sm text-gray-500">%</span>
                 </div>
               </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="tax2Name">Second Tax (optional)</Label>
+                <Label htmlFor="tax2Name">Second Tax (optional) {isFinancialFieldsLocked && "🔒"}</Label>
                 <div className="flex items-center space-x-2 mt-2">
                   <Input
                     id="tax2Name"
                     placeholder="Tax Name (Tax ID)"
+                    disabled={isFinancialFieldsLocked}
                     value={formData.tax2Name}
                     onChange={(e) =>
                       setFormData((prev) => ({
@@ -571,6 +336,7 @@ export function InvoiceForm() {
                   <Input
                     type="number"
                     placeholder="0.0000"
+                    disabled={isFinancialFieldsLocked}
                     value={formData.tax2Rate === 0 ? "" : formData.tax2Rate}
                     onChange={(e) =>
                       setFormData((prev) => ({
@@ -587,17 +353,17 @@ export function InvoiceForm() {
             {/* Payment Methods */}
             <div className="space-y-3">
               <div className="flex items-center space-x-2">
-                <Switch
-                  id="acceptCreditCards"
-                  checked={formData.acceptCreditCards}
-                  disabled={!stripeConnected}
-                  onCheckedChange={(checked) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      acceptCreditCards: checked,
-                    }))
-                  }
-                />
+                  <Switch
+                    id="acceptCreditCards"
+                    checked={formData.acceptCreditCards}
+                    disabled={!stripeConnected}
+                    onCheckedChange={(checked: boolean) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        acceptCreditCards: checked,
+                      }))
+                    }
+                  />
                 <Label htmlFor="acceptCreditCards">
                   Accept Credit Cards (Stripe)
                 </Label>
@@ -625,27 +391,10 @@ export function InvoiceForm() {
           </CardContent>
         </Card>
 
-        {/* Form Actions */}
-        <div className="flex justify-end space-x-4 pb-8">
-          <Button
-            variant="outline"
-            onClick={() => handleSubmit("draft")}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? "Saving..." : "Save as Draft"}
-          </Button>
-          <Button
-            onClick={() => handleSubmit("send")}
-            disabled={isSubmitting}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            {isSubmitting ? "Creating..." : "Create & Send Invoice"}
-          </Button>
-        </div>
       </div>
 
-      {/* Calculations Panel */}
-      <div className="lg:col-span-1">
+      {/* Right Panel - Sticky */}
+      <div className="w-80 flex flex-col gap-4 sticky top-6 self-start">
         <CalculationsPanel
           subtotal={calculateSubtotal()}
           discount={calculateDiscount()}
@@ -655,7 +404,51 @@ export function InvoiceForm() {
           currency={formData.currency}
           tax1Name={formData.tax1Name}
           tax2Name={formData.tax2Name}
+            items={formData.items.map((it) => ({ description: it.description, amount: Number(it.amount), quantity: Number(it.quantity) || 1 }))}
+          discountType={formData.discountType}
+          discountValue={formData.discountValue}
+          tax1Rate={formData.tax1Rate}
+          tax2Rate={formData.tax2Rate}
         />
+
+        {/* Form Actions */}
+        {isEditing && invoiceActions ? (
+          <Card>
+            <CardContent className="space-y-2">
+              <Button
+                variant="outline"
+                onClick={() => handleSubmit("draft")}
+                disabled={isSubmitting || !isDirty}
+                className="w-full"
+              >
+                {isSubmitting ? "Saving..." : "Update"}
+              </Button>
+              {invoiceActions}
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardContent className="space-y-2">
+                <Button
+                  variant="outline"
+                  onClick={() => handleSubmit("draft")}
+                  disabled={isSubmitting}
+                  className="w-full"
+                >
+                  {isSubmitting ? "Saving..." : isEditing ? "Update" : "Save as Draft"}
+                </Button>
+                {!isEditing && (
+                  <Button
+                    onClick={() => handleSubmit("send")}
+                    disabled={isSubmitting}
+                    className="w-full bg-blue-600 hover:bg-blue-700"
+                  >
+                    {isSubmitting ? "Creating..." : "Create & Send Invoice"}
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

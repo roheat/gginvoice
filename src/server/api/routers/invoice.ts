@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "@/lib/trpc";
+import { invoiceService } from "@/server/services/invoice-service";
 
 export const invoiceRouter = router({
   getAll: protectedProcedure.query(async ({ ctx }) => {
-    return await ctx.db.invoice.findMany({
+     const invoices = await ctx.db.invoice.findMany({
       where: {
         userId: ctx.session.user.id,
       },
@@ -15,6 +16,11 @@ export const invoiceRouter = router({
         createdAt: "desc",
       },
     });
+    console.log("invoices", invoices);
+    return {
+      success: true,
+      invoices,
+    };
   }),
 
   getById: protectedProcedure
@@ -43,15 +49,15 @@ export const invoiceRouter = router({
         items: z.array(
           z.object({
             description: z.string(),
-            quantity: z.number(),
-            rate: z.number(),
+            quantity: z.number().optional(),
+            rate: z.number().optional(),
             amount: z.number(),
           })
         ),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const subtotal = input.items.reduce((sum, item) => sum + item.amount, 0);
+      const subtotal = input.items.reduce((sum, item) => sum + (Number(item.amount) * (item.quantity || 1)), 0);
 
       return await ctx.db.invoice.create({
         data: {
@@ -78,32 +84,206 @@ export const invoiceRouter = router({
     .input(
       z.object({
         id: z.string(),
-        status: z.enum(["DRAFT", "SENT", "PAID", "OVERDUE"]).optional(),
         notes: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
+      // Only allow notes updates through the generic update (non-financial)
       return await ctx.db.invoice.update({
         where: {
           id: input.id,
           userId: ctx.session.user.id,
         },
         data: {
-          status: input.status,
           notes: input.notes,
+        },
+        include: {
+          client: true,
+          items: true,
         },
       });
     }),
 
-  delete: protectedProcedure
-    .input(z.object({ id: z.string() }))
+  // State Machine Mutations
+
+  /**
+   * Send invoice: DRAFT → SENT
+   * Idempotent transition
+   */
+  sendInvoice: protectedProcedure
+    .input(z.object({ id: z.string(), notes: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
-      return await ctx.db.invoice.delete({
+      // Verify invoice belongs to user
+      const invoice = await ctx.db.invoice.findFirst({
         where: {
           id: input.id,
           userId: ctx.session.user.id,
         },
       });
+
+      if (!invoice) {
+        throw new Error("Invoice not found");
+      }
+
+      const result = await invoiceService.sendInvoice(
+        input.id,
+        ctx.session.user.id,
+        input.notes
+      );
+
+      if (!result.success) {
+        throw new Error(`[${result.code}] ${result.error}`);
+      }
+
+      return result;
+    }),
+
+  /**
+   * Mark invoice as paid: DRAFT|SENT → PAID (manual)
+   * Requires paymentRef for idempotency
+   * Idempotent: calling with same paymentRef returns success
+   */
+  markInvoicePaid: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        paymentRef: z.string().min(1, "Payment reference is required"),
+        amount: z.number().optional(),
+        currency: z.string().optional(),
+        notes: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Verify invoice belongs to user
+      const invoice = await ctx.db.invoice.findFirst({
+        where: {
+          id: input.id,
+          userId: ctx.session.user.id,
+        },
+      });
+
+      if (!invoice) {
+        throw new Error("Invoice not found");
+      }
+
+      const result = await invoiceService.markInvoicePaid(
+        input.id,
+        ctx.session.user.id,
+        input.paymentRef,
+        input.amount,
+        input.currency,
+        input.notes
+      );
+
+      if (!result.success) {
+        throw new Error(`[${result.code}] ${result.error}`);
+      }
+
+      return result;
+    }),
+
+  /**
+   * Refund invoice: PAID → REFUNDED (full manual refund)
+   * Requires refundRef for idempotency
+   * One-way: cannot refund already refunded invoices with different ref
+   */
+  refundInvoice: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        refundRef: z.string().min(1, "Refund reference is required"),
+        notes: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Verify invoice belongs to user
+      const invoice = await ctx.db.invoice.findFirst({
+        where: {
+          id: input.id,
+          userId: ctx.session.user.id,
+        },
+      });
+
+      if (!invoice) {
+        throw new Error("Invoice not found");
+      }
+
+      const result = await invoiceService.refundInvoice(
+        input.id,
+        ctx.session.user.id,
+        input.refundRef,
+        input.notes
+      );
+
+      if (!result.success) {
+        throw new Error(`[${result.code}] ${result.error}`);
+      }
+
+      return result;
+    }),
+
+  /**
+   * Soft delete invoice: set deleted = true
+   * Blocks all transitions while deleted
+   * Idempotent
+   */
+  softDeleteInvoice: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      // Verify invoice belongs to user
+      const invoice = await ctx.db.invoice.findFirst({
+        where: {
+          id: input.id,
+          userId: ctx.session.user.id,
+        },
+      });
+
+      if (!invoice) {
+        throw new Error("Invoice not found");
+      }
+
+      const result = await invoiceService.softDeleteInvoice(
+        input.id,
+        ctx.session.user.id
+      );
+
+      if (!result.success) {
+        throw new Error(`[${result.code}] ${result.error}`);
+      }
+
+      return result;
+    }),
+
+  /**
+   * Restore invoice: set deleted = false
+   * Only operation allowed on deleted invoices
+   * Idempotent
+   */
+  restoreInvoice: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      // Verify invoice belongs to user
+      const invoice = await ctx.db.invoice.findFirst({
+        where: {
+          id: input.id,
+          userId: ctx.session.user.id,
+        },
+      });
+
+      if (!invoice) {
+        throw new Error("Invoice not found");
+      }
+
+      const result = await invoiceService.restoreInvoice(
+        input.id,
+        ctx.session.user.id
+      );
+
+      if (!result.success) {
+        throw new Error(`[${result.code}] ${result.error}`);
+      }
+
+      return result;
     }),
 
   generateNumber: protectedProcedure.query(async ({ ctx }) => {
