@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "@/lib/trpc";
 import { invoiceService } from "@/server/services/invoice-service";
+import { sendEmail } from "@/lib/resend";
+import { createInvoiceEmail } from "@/lib/email";
 
 export const invoiceRouter = router({
   getAll: protectedProcedure.query(async ({ ctx }) => {
@@ -61,6 +63,8 @@ export const invoiceRouter = router({
 
       return await ctx.db.invoice.create({
         data: {
+          updatedAt: new Date(),
+          shareId: `share-${Date.now()}`,
           clientId: input.clientId,
           userId: ctx.session.user.id,
           number: input.number,
@@ -134,8 +138,56 @@ export const invoiceRouter = router({
       if (!result.success) {
         throw new Error(`[${result.code}] ${result.error}`);
       }
+    // Attempt to send an email to the client with the public invoice link.
+    // This is intentionally outside the invoice state transition transaction.
+    try {
+      const invoiceWithClient = result.invoice;
+      const clientEmail = invoiceWithClient?.client?.email;
 
-      return result;
+      if (!clientEmail) {
+        // Record an EMAIL_FAILED event for missing recipient
+        await ctx.db.invoiceEvent.create({
+          data: {
+            invoiceId: input.id,
+            type: "EMAIL_FAILED",
+            actorId: ctx.session.user.id,
+            notes: "No client email address available",
+          },
+        });
+      } else {
+        const { subject, html, text } = createInvoiceEmail(invoiceWithClient);
+        await sendEmail({
+          to: clientEmail,
+          subject,
+          html,
+          text,
+        });
+
+        await ctx.db.invoiceEvent.create({
+          data: {
+            invoiceId: input.id,
+            type: "EMAIL_SENT",
+            actorId: ctx.session.user.id,
+            ref: null,
+            notes: `Email sent to ${clientEmail}`,
+          },
+        });
+      }
+    } catch (err) {
+      // Log failure and create an EMAIL_FAILED event for observability
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("Failed to send invoice email:", message);
+      await ctx.db.invoiceEvent.create({
+        data: {
+          invoiceId: input.id,
+          type: "EMAIL_FAILED",
+          actorId: ctx.session.user.id,
+          notes: message,
+        },
+      });
+    }
+
+    return result;
     }),
 
   /**

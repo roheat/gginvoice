@@ -1,6 +1,6 @@
-"use client";
+ "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,21 +10,42 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
 interface ClientFormData {
+  id?: string;
   name: string;
   email: string;
   address: string;
   phone: string;
 }
 
-export function ClientForm() {
+type ClientFormProps = {
+  initialData?: ClientFormData;
+  isEditing?: boolean;
+  onSuccess?: () => void;
+};
+
+export function ClientForm({ initialData, isEditing = false, onSuccess }: ClientFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<ClientFormData>({
-    name: "",
-    email: "",
-    address: "",
-    phone: "",
+    id: initialData?.id,
+    name: initialData?.name || "",
+    email: initialData?.email || "",
+    address: initialData?.address || "",
+    phone: initialData?.phone || "",
   });
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        id: initialData.id,
+        name: initialData.name || "",
+        email: initialData.email || "",
+        address: initialData.address || "",
+        phone: initialData.phone || "",
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData]);
 
   const handleInputChange = (field: keyof ClientFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -54,30 +75,44 @@ export function ClientForm() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/clients", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: formData.name.trim(),
-          email: formData.email.trim(),
-          address: formData.address.trim() || null,
-          phone: formData.phone.trim() || null,
-        }),
-      });
+      const payload = {
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        address: formData.address.trim() || null,
+        phone: formData.phone.trim() || null,
+      };
+
+      let response: Response;
+      if (isEditing && formData.id) {
+        response = await fetch(`/api/clients/${formData.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        response = await fetch("/api/clients", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      }
 
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        throw new Error(result.error || "Failed to create client");
+        throw new Error(result.error || "Failed to save client");
       }
 
-      toast.success("Client created successfully!");
-      router.push("/clients");
+      toast.success(isEditing ? "Client updated successfully!" : "Client created successfully!");
+
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        router.push("/clients");
+      }
     } catch (error) {
-      console.error("Client creation error:", error);
-      toast.error("Failed to create client");
+      console.error("Client save error:", error);
+      toast.error(isEditing ? "Failed to update client" : "Failed to create client");
     } finally {
       setIsSubmitting(false);
     }
@@ -151,7 +186,7 @@ export function ClientForm() {
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Creating..." : "Create Client"}
+              {isSubmitting ? (isEditing ? "Saving..." : "Creating...") : isEditing ? "Save Changes" : "Create Client"}
             </Button>
           </div>
         </form>

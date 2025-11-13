@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "@/lib/trpc";
 
 export const clientRouter = router({
@@ -54,11 +55,18 @@ export const clientRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
+
+      // Verify ownership
+      const existing = await ctx.db.client.findFirst({
+        where: { id, userId: ctx.session.user.id },
+      });
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Client not found" });
+      }
+
+      // Use single-key where (id) for update
       return await ctx.db.client.update({
-        where: {
-          id,
-          userId: ctx.session.user.id,
-        },
+        where: { id },
         data,
       });
     }),
@@ -66,11 +74,16 @@ export const clientRouter = router({
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
+      // Verify ownership first
+      const existing = await ctx.db.client.findFirst({
+        where: { id: input.id, userId: ctx.session.user.id },
+      });
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Client not found" });
+      }
+
       return await ctx.db.client.delete({
-        where: {
-          id: input.id,
-          userId: ctx.session.user.id,
-        },
+        where: { id: input.id },
       });
     }),
 

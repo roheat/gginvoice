@@ -5,8 +5,9 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { MainContent } from "@/components/dashboard/main-content";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2, Eye } from "lucide-react";
+import { Plus, Edit, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import {
   Table,
   TableBody,
@@ -28,6 +29,7 @@ interface Client {
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchClients = async () => {
@@ -50,14 +52,24 @@ export default function ClientsPage() {
   const handleDeleteClient = async (clientId: string) => {
     if (confirm("Are you sure you want to delete this client?")) {
       try {
+        setDeletingId(clientId);
         const response = await fetch(`/api/clients/${clientId}`, {
           method: "DELETE",
         });
-        if (response.ok) {
-          setClients(clients.filter((client) => client.id !== clientId));
+        const result = await response.json().catch(() => null);
+        if (response.ok && result && result.success) {
+          setClients((prev) => prev.filter((client) => client.id !== clientId));
+          toast.success("Client deleted");
+        } else {
+          const err = result?.error || "Failed to delete client";
+          toast.error(err);
+          console.error("Failed to delete client:", err);
         }
+        setDeletingId(null);
       } catch (error) {
         console.error("Failed to delete client:", error);
+        toast.error("Failed to delete client");
+        setDeletingId(null);
       }
     }
   };
@@ -139,10 +151,7 @@ export default function ClientsPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end space-x-2">
-                            <Button variant="ghost" size="sm">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" onClick={() => (window.location.href = `/clients/${client.id}/edit`)}>
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button
@@ -150,6 +159,7 @@ export default function ClientsPage() {
                               size="sm"
                               onClick={() => handleDeleteClient(client.id)}
                               className="text-red-600 hover:text-red-700"
+                              disabled={deletingId === client.id}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>

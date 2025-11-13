@@ -8,6 +8,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import {
   CreditCard,
   CheckCircle,
@@ -19,6 +29,162 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+
+type Settings = {
+  companyName?: string | null;
+  companyAddress?: string | null;
+  companyPhone?: string | null;
+  companyEmail?: string | null;
+  companyWebsite?: string | null;
+  defaultCurrency?: string;
+  defaultTaxRate?: number | null;
+  emailNotifications?: boolean;
+};
+
+function AccountSettingsForm() {
+  const [settings, setSettings] = useState<Settings | null>(null);
+  const [initialSettings, setInitialSettings] = useState<Settings | null>(null);
+  const [loadingSettings, setLoadingSettings] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch("/api/settings/account");
+        const json = await res.json();
+        if (res.ok && json.success) {
+          const s = json.user?.settings || {};
+          // Normalize numeric field
+          if (s.defaultTaxRate === null || s.defaultTaxRate === undefined) s.defaultTaxRate = 0;
+          setSettings(s);
+          setInitialSettings(s);
+        } else {
+          console.error("Failed to fetch settings", json);
+        }
+      } catch (err) {
+        console.error("Error fetching settings:", err);
+      } finally {
+        setLoadingSettings(false);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const handleChange = (field: keyof Settings, value: string | number | boolean | null) => {
+    setSettings((prev) => ({ ...(prev || {}), [field]: value }));
+  };
+
+  const normalize = (s: Settings | null) => ({
+    companyName: s?.companyName ?? null,
+    companyAddress: s?.companyAddress ?? null,
+    companyPhone: s?.companyPhone ?? null,
+    companyEmail: s?.companyEmail ?? null,
+    companyWebsite: s?.companyWebsite ?? null,
+    defaultCurrency: s?.defaultCurrency ?? "USD",
+    defaultTaxRate: s?.defaultTaxRate ?? 0,
+    emailNotifications: s?.emailNotifications ?? true,
+  });
+
+  const isDirty = () => {
+    if (!initialSettings || !settings) return false;
+    return JSON.stringify(normalize(initialSettings)) !== JSON.stringify(normalize(settings));
+  };
+
+  const handleSave = async () => {
+    if (!settings) return;
+    setSaving(true);
+    try {
+      const payload = {
+        companyName: settings.companyName ?? null,
+        companyAddress: settings.companyAddress ?? null,
+        companyPhone: settings.companyPhone ?? null,
+        companyEmail: settings.companyEmail ?? null,
+        companyWebsite: settings.companyWebsite ?? null,
+        defaultCurrency: settings.defaultCurrency ?? "USD",
+        defaultTaxRate: settings.defaultTaxRate ?? 0,
+        emailNotifications: settings.emailNotifications ?? false,
+      };
+      const res = await fetch("/api/settings/account", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setInitialSettings(json.settings || settings);
+        setSettings((prev) => ({ ...(prev || {}), ...json.settings }));
+        toast.success("Settings updated");
+      } else {
+        toast.error(json.error || "Failed to update settings");
+      }
+    } catch (err) {
+      console.error("Error saving settings:", err);
+      toast.error("Failed to update settings");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loadingSettings) {
+    return <div className="py-6">Loading settings...</div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <Label htmlFor="companyName">Company Name</Label>
+        <Input
+          id="companyName"
+          value={settings?.companyName ?? ""}
+          onChange={(e) => handleChange("companyName", e.target.value)}
+          placeholder="Your company name"
+        />
+      </div>
+      <div>
+        <Label>Default Currency</Label>
+        <Select value={settings?.defaultCurrency ?? "USD"} onValueChange={(val) => handleChange("defaultCurrency", val)}>
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="USD">USD - US Dollar</SelectItem>
+            <SelectItem value="EUR">EUR - Euro</SelectItem>
+            <SelectItem value="GBP">GBP - British Pound</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <Label htmlFor="defaultTaxRate">Default Tax Rate</Label>
+        <Input
+          id="defaultTaxRate"
+          type="number"
+          step="0.01"
+          value={settings?.defaultTaxRate ?? 0}
+          onChange={(e) => handleChange("defaultTaxRate", e.target.value === "" ? null : Number(e.target.value))}
+          placeholder="0.00"
+        />
+      </div>
+      <div className="flex items-center">
+        <Switch
+          checked={Boolean(settings?.emailNotifications)}
+          onCheckedChange={(val) => handleChange("emailNotifications", Boolean(val))}
+        />
+        <Label className="ml-2">Email notifications for new invoices</Label>
+      </div>
+      <div className="pt-4 border-t flex items-center justify-end space-x-3">
+        <Button variant="outline" onClick={() => {
+          // reset to initial
+          setSettings(initialSettings);
+        }} disabled={saving}>
+          Cancel
+        </Button>
+        <Button onClick={handleSave} disabled={!isDirty() || saving}>
+          {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</> : "Update Settings"}
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 interface StripeConnectionStatus {
   connected: boolean;
@@ -185,7 +351,7 @@ export default function SettingsPage() {
         subtitle="Manage your account and application settings"
       />
       <MainContent>
-        <div className="space-y-6">
+      <div className="space-y-6 mx-10">
           {/* Stripe Payment Integration */}
           <Card>
             <CardHeader>
@@ -308,82 +474,17 @@ export default function SettingsPage() {
               )}
             </CardContent>
           </Card>
-
-          <Card className="bg-white shadow-sm rounded-lg">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card className="bg-white shadow-sm rounded-lg md:col-span-2">
             <CardHeader>
-              <h2 className="text-lg font-medium text-gray-900">
-                Account Settings
-              </h2>
+              <h2 className="text-lg font-medium text-gray-900">Account Settings</h2>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Company Name
-                  </label>
-                  <input
-                    type="text"
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    placeholder="Your company name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Default Currency
-                  </label>
-                  <select className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                    <option value="USD">USD - US Dollar</option>
-                    <option value="EUR">EUR - Euro</option>
-                    <option value="GBP">GBP - British Pound</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Default Tax Rate
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    placeholder="0.00"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white shadow-sm rounded-lg">
-            <CardHeader>
-              <h2 className="text-lg font-medium text-gray-900">
-                Notification Settings
-              </h2>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    defaultChecked
-                  />
-                  <label className="ml-2 block text-sm text-gray-900">
-                    Email notifications for new invoices
-                  </label>
-                </div>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    defaultChecked
-                  />
-                  <label className="ml-2 block text-sm text-gray-900">
-                    Email notifications for payments
-                  </label>
-                </div>
-              </div>
+              <AccountSettingsForm />
             </CardContent>
           </Card>
         </div>
+            </div>
       </MainContent>
     </DashboardLayout>
   );

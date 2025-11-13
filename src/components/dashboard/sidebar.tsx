@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 interface SidebarProps {
   children: React.ReactNode;
@@ -137,10 +138,17 @@ function SidebarContent({ pathname, onSignOut, session }: SidebarContentProps) {
   return (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="flex items-center h-16 flex-shrink-0 px-4">
-        <div className="flex items-center">
+      <div className="flex items-center justify-center h-16 flex-shrink-0 px-4">
+        <div className="flex items-center justify-center">
           <div className="flex-shrink-0">
-            <h1 className="text-2xl font-bold text-white">gginvoice</h1>
+            <div className="relative h-12 w-32 md:h-16 md:w-40 overflow-hidden">
+              <Image
+                src="/logo-white.svg"
+                alt="gginvoice"
+                fill
+                className="object-cover"
+              />
+            </div>
           </div>
         </div>
       </div>
