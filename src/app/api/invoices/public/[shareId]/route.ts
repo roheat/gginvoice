@@ -34,6 +34,7 @@ export async function GET(
                 companyPhone: true,
                 companyEmail: true,
                 companyWebsite: true,
+                companyLogoUrl: true,
               },
             },
           },

@@ -161,6 +161,8 @@ model UserSettings {
   companyPhone       String?
   companyEmail       String?
   companyWebsite     String?
+  companyLogoUrl     String?
+  companyLogoPath    String?
   emailNotifications Boolean  @default(true)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @default(now()) @updatedAt

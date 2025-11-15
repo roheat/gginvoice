@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { generateInvoicePDF } from "@/lib/pdf-generator";
 import { PaymentForm } from "@/components/payments/payment-form";
+import Image from "next/image";
 
 interface InvoiceItem {
   id: string;
@@ -38,6 +39,7 @@ interface UserSettings {
   companyPhone?: string | null;
   companyEmail?: string | null;
   companyWebsite?: string | null;
+  companyLogoUrl?: string | null;
 }
 
 interface User {
@@ -227,6 +229,21 @@ export function PublicInvoiceDisplay({ invoice }: PublicInvoiceDisplayProps) {
         {/* Invoice Card */}
         <Card className="shadow-lg print:shadow-none print:border print:border-gray-300">
           <CardContent className="p-6 print:p-6">
+            {/* Logo */}
+            {invoice.user.settings?.companyLogoUrl && (
+              <div className="mb-6 print:mb-5">
+                <div className="relative w-48 h-24">
+                  <Image
+                    src={invoice.user.settings.companyLogoUrl}
+                    alt="Company Logo"
+                    fill
+                    className="object-contain object-left"
+                    unoptimized
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Invoice Header */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 print:mb-5">
               {/* Bill From - Company Info */}

@@ -1,5 +1,5 @@
 import React from "react";
-import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import { Document, Page, Text, View, StyleSheet, Image } from "@react-pdf/renderer";
 
 // Use default fonts for better compatibility
 // Font.register({
@@ -13,6 +13,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     padding: 24,
     fontFamily: "Helvetica",
+  },
+  logo: {
+    width: 192,
+    height: 96,
+    objectFit: "contain",
+    marginBottom: 20,
   },
   header: {
     flexDirection: "row",
@@ -233,6 +239,7 @@ interface UserSettings {
   companyPhone?: string | null;
   companyEmail?: string | null;
   companyWebsite?: string | null;
+  companyLogoUrl?: string | null;
 }
 
 interface User {
@@ -339,6 +346,14 @@ const InvoicePDF = ({ invoice }: { invoice: Invoice }) => {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
+        {/* Logo */}
+        {invoice.user.settings?.companyLogoUrl && (
+          <Image 
+            src={invoice.user.settings.companyLogoUrl} 
+            style={styles.logo}
+          />
+        )}
+
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.companyInfo}>

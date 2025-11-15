@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { LogoUpload } from "@/components/settings/logo-upload";
 
 type Settings = {
   companyName?: string | null;
@@ -36,6 +37,7 @@ type Settings = {
   companyPhone?: string | null;
   companyEmail?: string | null;
   companyWebsite?: string | null;
+  companyLogoUrl?: string | null;
   defaultCurrency?: string;
   defaultTaxRate?: number | null;
   emailNotifications?: boolean;
@@ -80,6 +82,7 @@ function AccountSettingsForm() {
     companyPhone: s?.companyPhone ?? null,
     companyEmail: s?.companyEmail ?? null,
     companyWebsite: s?.companyWebsite ?? null,
+    companyLogoUrl: s?.companyLogoUrl ?? null,
     defaultCurrency: s?.defaultCurrency ?? "USD",
     defaultTaxRate: s?.defaultTaxRate ?? 0,
     emailNotifications: s?.emailNotifications ?? true,
@@ -129,8 +132,17 @@ function AccountSettingsForm() {
     return <div className="py-6">Loading settings...</div>;
   }
 
+  const handleLogoUpdate = (logoUrl: string | null) => {
+    setSettings((prev) => ({ ...(prev || {}), companyLogoUrl: logoUrl }));
+    setInitialSettings((prev) => ({ ...(prev || {}), companyLogoUrl: logoUrl }));
+  };
+
   return (
     <div className="space-y-4">
+      <LogoUpload 
+        currentLogoUrl={settings?.companyLogoUrl}
+        onLogoUpdate={handleLogoUpdate}
+      />
       <div>
         <Label htmlFor="companyName">Company Name</Label>
         <Input
