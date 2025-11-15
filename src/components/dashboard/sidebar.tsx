@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
@@ -12,8 +12,8 @@ import {
   LogOut,
   Menu,
   X,
+  MoreVertical,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 
@@ -135,13 +135,29 @@ interface SidebarContentProps {
 }
 
 function SidebarContent({ pathname, onSignOut, session }: SidebarContentProps) {
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        profileMenuOpen &&
+        profileMenuRef.current &&
+        !profileMenuRef.current.contains(event.target as Node)
+      ) {
+        setProfileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [profileMenuOpen]);
   return (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="flex items-center justify-center h-16 flex-shrink-0 px-4">
-        <div className="flex items-center justify-center">
-          <div className="flex-shrink-0">
-            <div className="relative h-12 w-32 md:h-16 md:w-40 overflow-hidden">
+      <div className="flex items-center justify-center h-16 flex-shrink-0 px-4 mt-3">
+        <div className="flex items-center justify-center mt-3">
+            <div className="relative h-12 w-[225px] md:h-16 md:w-45 overflow-hidden">
               <Image
                 src="/logo-white.svg"
                 alt="gginvoice"
@@ -149,33 +165,11 @@ function SidebarContent({ pathname, onSignOut, session }: SidebarContentProps) {
                 className="object-cover"
               />
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* User profile - at the top */}
-      <div className="flex-shrink-0 px-4 py-3">
-        <div className="flex items-center gap-3">
-          <div className="flex-shrink-0">
-            <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center">
-              <span className="text-sm font-medium text-white">
-                {session?.user?.name?.charAt(0)?.toUpperCase() || "U"}
-              </span>
-            </div>
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-white truncate">
-              {session?.user?.name || "User"}
-            </p>
-            <p className="text-xs text-blue-200 truncate">
-              {session?.user?.email}
-            </p>
-          </div>
         </div>
       </div>
 
       {/* Navigation */}
-      <div className="flex-1 flex flex-col pb-4 overflow-y-auto">
+      <div className="flex-1 flex flex-col pb-4 mt-3 overflow-y-auto">
         <nav className="mt-5 flex-1 px-2 space-y-1">
           {navigation.map((item) => {
             const isActive = pathname === item.href;
@@ -210,18 +204,49 @@ function SidebarContent({ pathname, onSignOut, session }: SidebarContentProps) {
         </nav>
       </div>
 
-      {/* Logout button - at the bottom */}
-      <div className="flex-shrink-0 border-t border-blue-500 py-3 px-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onSignOut}
-          className="w-full justify-start text-white hover:bg-white/10"
-          title="Logout"
-        >
-          <LogOut className="h-4 w-4 mr-2" />
-          Logout
-        </Button>
+      {/* User profile */}
+      <div className="relative flex-shrink-0 border-t border-blue-500 py-3 px-4">
+        <div ref={profileMenuRef} className="relative flex items-center gap-3">
+          <div className="flex-shrink-0">
+            <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center">
+              <span className="text-sm font-medium text-white">
+                {session?.user?.name?.charAt(0)?.toUpperCase() || "U"}
+              </span>
+            </div>
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-white truncate">
+              {session?.user?.name || "User"}
+            </p>
+            <p className="text-xs text-blue-200 truncate">
+              {session?.user?.email}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="rounded-full p-1 text-white hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+            aria-expanded={profileMenuOpen}
+            aria-label="Profile actions"
+            onClick={() => setProfileMenuOpen((open) => !open)}
+          >
+            <MoreVertical className="h-5 w-5" />
+          </button>
+          {profileMenuOpen && (
+            <div className="absolute right-0 bottom-full mb-2 w-40 rounded-xl border border-white/20 bg-white text-slate-900 shadow-lg shadow-slate-900/30">
+              <button
+                type="button"
+                className="flex w-full items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 overflow-hidden rounded-xl"
+                onClick={() => {
+                  onSignOut();
+                  setProfileMenuOpen(false);
+                }}
+              >
+                <LogOut className="h-4 w-4 text-slate-500" />
+                Logout
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

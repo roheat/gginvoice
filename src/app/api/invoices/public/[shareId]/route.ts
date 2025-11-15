@@ -27,6 +27,15 @@ export async function GET(
             name: true,
             email: true,
             company: true,
+            settings: {
+              select: {
+                companyName: true,
+                companyAddress: true,
+                companyPhone: true,
+                companyEmail: true,
+                companyWebsite: true,
+              },
+            },
           },
         },
       },

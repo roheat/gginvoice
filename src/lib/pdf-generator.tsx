@@ -11,93 +11,110 @@ const styles = StyleSheet.create({
   page: {
     flexDirection: "column",
     backgroundColor: "#ffffff",
-    padding: 30,
+    padding: 24,
     fontFamily: "Helvetica",
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 30,
+    marginBottom: 20,
   },
   companyInfo: {
     flexDirection: "column",
   },
-  companyName: {
-    fontSize: 24,
+  sectionHeader: {
+    fontSize: 8,
     fontWeight: "bold",
-    color: "#000000",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    color: "#6b7280",
     marginBottom: 8,
   },
+  companyName: {
+    fontSize: 13,
+    fontWeight: "bold",
+    color: "#000000",
+    marginBottom: 6,
+  },
   companyEmail: {
-    fontSize: 12,
-    color: "#333333",
+    fontSize: 10,
+    color: "#4b5563",
+    lineHeight: 1.4,
+  },
+  detailRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginTop: 3,
   },
   invoiceDetails: {
     flexDirection: "column",
     alignItems: "flex-end",
   },
   invoiceTitle: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: "bold",
     color: "#000000",
-    marginBottom: 8,
+    marginBottom: 6,
   },
-  invoiceNumber: {
-    fontSize: 12,
-    color: "#333333",
-    marginBottom: 4,
+  invoiceMetaRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginBottom: 2,
+    gap: 12,
   },
-  invoiceDate: {
-    fontSize: 12,
-    color: "#333333",
+  invoiceMetaLabel: {
+    fontSize: 10,
+    color: "#6b7280",
+  },
+  invoiceMetaValue: {
+    fontSize: 10,
+    color: "#000000",
+    fontWeight: "bold",
   },
   statusBadge: {
     backgroundColor: "#3b82f6",
     color: "#ffffff",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    fontSize: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 3,
+    fontSize: 8,
     fontWeight: "bold",
-    marginTop: 8,
+    marginTop: 6,
+    alignSelf: "flex-end",
+  },
+  separator: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+    marginVertical: 20,
   },
   billToSection: {
-    marginBottom: 30,
-  },
-  billToTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#000000",
-    marginBottom: 12,
+    marginBottom: 20,
   },
   billToInfo: {
-    backgroundColor: "#f9fafb",
-    padding: 16,
-    borderRadius: 8,
+    flexDirection: "column",
   },
   clientName: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "bold",
     color: "#000000",
-    marginBottom: 4,
+    marginBottom: 6,
   },
   clientDetails: {
-    fontSize: 12,
-    color: "#333333",
-    marginBottom: 2,
+    fontSize: 10,
+    color: "#4b5563",
+    lineHeight: 1.4,
   },
   itemsTable: {
-    marginBottom: 30,
+    marginBottom: 20,
   },
   tableHeader: {
     flexDirection: "row",
-    backgroundColor: "#f3f4f6",
-    borderBottomWidth: 1,
+    borderBottomWidth: 2,
     borderBottomColor: "#d1d5db",
+    paddingBottom: 8,
   },
   tableHeaderCell: {
-    padding: 12,
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "bold",
     color: "#000000",
   },
@@ -110,15 +127,12 @@ const styles = StyleSheet.create({
   },
   tableRow: {
     flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
-  },
-  tableRowEven: {
-    backgroundColor: "#f9fafb",
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#f3f4f6",
+    paddingVertical: 8,
   },
   tableCell: {
-    padding: 12,
-    fontSize: 12,
+    fontSize: 10,
     color: "#000000",
   },
   descriptionCell: {
@@ -130,26 +144,27 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   quantityMeta: {
-    fontSize: 10,
+    fontSize: 8,
     color: "#6b7280",
     fontWeight: "normal",
   },
   calculations: {
     alignSelf: "flex-end",
-    width: 200,
-    marginBottom: 30,
+    width: 180,
+    marginBottom: 20,
   },
   calculationRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 4,
+    marginBottom: 3,
+    gap: 16,
   },
   calculationLabel: {
-    fontSize: 12,
-    color: "#333333",
+    fontSize: 10,
+    color: "#6b7280",
   },
   calculationValue: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "bold",
     color: "#000000",
   },
@@ -158,43 +173,42 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     borderTopWidth: 1,
     borderTopColor: "#d1d5db",
-    paddingTop: 8,
-    marginTop: 8,
+    paddingTop: 6,
+    marginTop: 6,
+    gap: 16,
   },
   totalLabel: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: "bold",
     color: "#000000",
   },
   totalValue: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: "bold",
     color: "#0000ff",
   },
   notesSection: {
-    marginBottom: 30,
-  },
-  notesTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#000000",
-    marginBottom: 8,
+    marginBottom: 20,
   },
   notesContent: {
     backgroundColor: "#f9fafb",
-    padding: 16,
-    borderRadius: 8,
-    fontSize: 12,
+    padding: 10,
+    borderRadius: 4,
+    fontSize: 9,
     color: "#000000",
+    lineHeight: 1.5,
   },
   footer: {
     position: "absolute",
-    bottom: 30,
-    left: 30,
-    right: 30,
+    bottom: 24,
+    left: 24,
+    right: 24,
     textAlign: "center",
-    fontSize: 10,
-    color: "#333333",
+    fontSize: 8,
+    color: "#6b7280",
+    borderTopWidth: 1,
+    borderTopColor: "#e5e7eb",
+    paddingTop: 16,
   },
 });
 
@@ -213,10 +227,19 @@ interface Client {
   phone: string | null;
 }
 
+interface UserSettings {
+  companyName?: string | null;
+  companyAddress?: string | null;
+  companyPhone?: string | null;
+  companyEmail?: string | null;
+  companyWebsite?: string | null;
+}
+
 interface User {
   name: string | null;
   email: string | null;
   company: string | null;
+  settings?: UserSettings | null;
 }
 
 interface Invoice {
@@ -242,6 +265,15 @@ interface Invoice {
   items: InvoiceItem[];
   createdAt: string;
 }
+
+const resolveCompanyName = (user: User) => {
+  return (
+    user.settings?.companyName?.trim() ||
+    user.company?.trim() ||
+    user.name ||
+    "Company Name"
+  );
+};
 
 const InvoicePDF = ({ invoice }: { invoice: Invoice }) => {
   console.log("Rendering PDF for invoice:", invoice);
@@ -272,29 +304,67 @@ const InvoicePDF = ({ invoice }: { invoice: Invoice }) => {
   const tax1Amount = invoice.tax1Rate > 0 ? (taxableAmount * Number(invoice.tax1Rate)) / 100 : 0;
   const tax2Amount = invoice.tax2Rate > 0 ? (taxableAmount * Number(invoice.tax2Rate)) / 100 : 0;
 
+  const invoiceFromName = resolveCompanyName(invoice.user);
+  const userDetails = [
+    {
+      label: "Email",
+      value:
+        invoice.user.settings?.companyEmail?.trim() ||
+        invoice.user.email?.trim(),
+    },
+    {
+      label: "Phone",
+      value: invoice.user.settings?.companyPhone?.trim(),
+    },
+    {
+      label: "Address",
+      value: invoice.user.settings?.companyAddress?.trim(),
+    },
+    {
+      label: "Website",
+      value: invoice.user.settings?.companyWebsite?.trim(),
+    },
+  ].filter((detail): detail is { label: string; value: string } =>
+    Boolean(detail.value?.trim())
+  );
+
+  const clientDetails = [
+    { label: "Email", value: invoice.client.email },
+    { label: "Phone", value: invoice.client.phone },
+    { label: "Address", value: invoice.client.address },
+  ].filter((detail): detail is { label: string; value: string } =>
+    Boolean(detail.value?.trim())
+  );
+
   return (
     <Document>
       <Page size="A4" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.companyInfo}>
-            <Text style={styles.companyName}>
-              {invoice.user.company || invoice.user.name || "Company Name"}
-            </Text>
-            {invoice.user.email && (
-              <Text style={styles.companyEmail}>{invoice.user.email}</Text>
-            )}
+            <Text style={styles.sectionHeader}>BILL FROM</Text>
+            <Text style={styles.companyName}>{invoiceFromName}</Text>
+            {userDetails.map((detail) => (
+              <View key={detail.label} style={styles.detailRow}>
+                <Text style={styles.companyEmail}>{detail.value}</Text>
+              </View>
+            ))}
           </View>
           <View style={styles.invoiceDetails}>
             <Text style={styles.invoiceTitle}>INVOICE</Text>
-            <Text style={styles.invoiceNumber}>#{invoice.number}</Text>
-            <Text style={styles.invoiceDate}>
-              Date: {formatDate(invoice.date)}
-            </Text>
+            <View style={styles.invoiceMetaRow}>
+              <Text style={styles.invoiceMetaLabel}>Invoice #</Text>
+              <Text style={styles.invoiceMetaValue}>{invoice.number}</Text>
+            </View>
+            <View style={styles.invoiceMetaRow}>
+              <Text style={styles.invoiceMetaLabel}>Date</Text>
+              <Text style={styles.invoiceMetaValue}>{formatDate(invoice.date)}</Text>
+            </View>
             {invoice.dueDate && (
-              <Text style={styles.invoiceDate}>
-                Due: {formatDate(invoice.dueDate)}
-              </Text>
+              <View style={styles.invoiceMetaRow}>
+                <Text style={styles.invoiceMetaLabel}>Due Date</Text>
+                <Text style={styles.invoiceMetaValue}>{formatDate(invoice.dueDate)}</Text>
+              </View>
             )}
             <Text style={styles.statusBadge}>
               {invoice.status.toUpperCase()}
@@ -302,20 +372,19 @@ const InvoicePDF = ({ invoice }: { invoice: Invoice }) => {
           </View>
         </View>
 
+        {/* Separator */}
+        <View style={styles.separator} />
+
         {/* Bill To Section */}
         <View style={styles.billToSection}>
-          <Text style={styles.billToTitle}>Bill To</Text>
+          <Text style={styles.sectionHeader}>BILL TO</Text>
           <View style={styles.billToInfo}>
             <Text style={styles.clientName}>{invoice.client.name}</Text>
-            {invoice.client.email && (
-              <Text style={styles.clientDetails}>{invoice.client.email}</Text>
-            )}
-            {invoice.client.phone && (
-              <Text style={styles.clientDetails}>{invoice.client.phone}</Text>
-            )}
-            {invoice.client.address && (
-              <Text style={styles.clientDetails}>{invoice.client.address}</Text>
-            )}
+            {clientDetails.map((detail) => (
+              <View key={detail.label} style={styles.detailRow}>
+                <Text style={styles.clientDetails}>{detail.value}</Text>
+              </View>
+            ))}
           </View>
         </View>
 
@@ -329,17 +398,11 @@ const InvoicePDF = ({ invoice }: { invoice: Invoice }) => {
               Amount
             </Text>
           </View>
-          {invoice.items.map((item, index) => {
+          {invoice.items.map((item) => {
             const quantity = Number(item.quantity || 1);
             const lineTotal = Number(item.amount) * quantity;
             return (
-              <View
-                key={item.id}
-                style={[
-                  styles.tableRow,
-                  index % 2 === 0 ? styles.tableRowEven : {},
-                ]}
-              >
+              <View key={item.id} style={styles.tableRow}>
                 <Text style={[styles.tableCell, styles.descriptionCell]}>
                   {item.description}
                   {quantity > 1 && (
@@ -350,9 +413,9 @@ const InvoicePDF = ({ invoice }: { invoice: Invoice }) => {
                   {formatCurrency(lineTotal, invoice.currency)}
                   {quantity > 1 && (
                     <Text style={styles.quantityMeta}>
-                      {" "}
-                      ({formatCurrency(Number(item.amount), invoice.currency)}
-                      {" × " + quantity})
+                      {"\n"}
+                      {formatCurrency(Number(item.amount), invoice.currency)}
+                      {" × " + quantity}
                     </Text>
                   )}
                 </Text>
@@ -364,7 +427,7 @@ const InvoicePDF = ({ invoice }: { invoice: Invoice }) => {
         {/* Calculations */}
         <View style={styles.calculations}>
           <View style={styles.calculationRow}>
-            <Text style={styles.calculationLabel}>Subtotal:</Text>
+            <Text style={styles.calculationLabel}>Subtotal</Text>
             <Text style={styles.calculationValue}>
               {formatCurrency(subtotal, invoice.currency)}
             </Text>
@@ -377,9 +440,8 @@ const InvoicePDF = ({ invoice }: { invoice: Invoice }) => {
                 {invoice.discountType === "PERCENTAGE"
                   ? `(${invoice.discount}%)`
                   : ""}
-                :
               </Text>
-              <Text style={[styles.calculationValue, { color: "#ff0000" }]}>
+              <Text style={[styles.calculationValue, { color: "#dc2626" }]}>
                 -{formatCurrency(discountAmount, invoice.currency)}
               </Text>
             </View>
@@ -388,7 +450,7 @@ const InvoicePDF = ({ invoice }: { invoice: Invoice }) => {
           {invoice.tax1Rate > 0 && (
             <View style={styles.calculationRow}>
               <Text style={styles.calculationLabel}>
-                {invoice.tax1Name || "Tax"} ({invoice.tax1Rate}%):
+                {invoice.tax1Name || "Tax"} ({invoice.tax1Rate}%)
               </Text>
               <Text style={styles.calculationValue}>
                 {formatCurrency(tax1Amount, invoice.currency)}
@@ -399,7 +461,7 @@ const InvoicePDF = ({ invoice }: { invoice: Invoice }) => {
           {invoice.tax2Rate > 0 && (
             <View style={styles.calculationRow}>
               <Text style={styles.calculationLabel}>
-                {invoice.tax2Name || "Tax 2"} ({invoice.tax2Rate}%):
+                {invoice.tax2Name || "Tax 2"} ({invoice.tax2Rate}%)
               </Text>
               <Text style={styles.calculationValue}>
                 {formatCurrency(tax2Amount, invoice.currency)}
@@ -408,7 +470,7 @@ const InvoicePDF = ({ invoice }: { invoice: Invoice }) => {
           )}
 
           <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Total:</Text>
+            <Text style={styles.totalLabel}>Total</Text>
             <Text style={styles.totalValue}>
               {formatCurrency(total, invoice.currency)}
             </Text>
@@ -418,7 +480,7 @@ const InvoicePDF = ({ invoice }: { invoice: Invoice }) => {
         {/* Notes */}
         {invoice.notes && (
           <View style={styles.notesSection}>
-            <Text style={styles.notesTitle}>Notes</Text>
+            <Text style={styles.sectionHeader}>NOTES</Text>
             <View style={styles.notesContent}>
               <Text>{invoice.notes}</Text>
             </View>
@@ -426,7 +488,9 @@ const InvoicePDF = ({ invoice }: { invoice: Invoice }) => {
         )}
 
         {/* Footer */}
-        <Text style={styles.footer}>Powered by gginvoice</Text>
+        <Text style={styles.footer}>
+          Powered by <Text style={{ fontWeight: "bold", color: "#2563eb" }}>gginvoice</Text>
+        </Text>
       </Page>
     </Document>
   );
