@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { InvoiceItemData } from "@/components/invoices/invoice-item";
+import { calculateInvoice } from "@/lib/invoice-calculations";
 
 export interface InitialInvoice {
   clientId?: string;
@@ -16,6 +17,8 @@ export interface InitialInvoice {
   notes?: string | null;
   discountType?: string;
   discount?: number;
+  discountValue?: number;
+  subtotal?: number;
   tax1Name?: string | null;
   tax1Rate?: number;
   tax2Name?: string | null;
@@ -78,7 +81,7 @@ export function useInvoiceForm({ initialInvoice, isEditing = false }: UseInvoice
           : [{ id: "1", description: "", amount: 0, quantity: 1, showQuantity: false }],
         notes: initialInvoice.notes || "",
         discountType: (initialInvoice.discountType || "percentage").toLowerCase() as "percentage" | "amount",
-        discountValue: initialInvoice.discount || 0,
+        discountValue: initialInvoice.discountValue || 0,
         tax1Name: initialInvoice.tax1Name || "",
         tax1Rate: initialInvoice.tax1Rate || 0,
         tax2Name: initialInvoice.tax2Name || "",
@@ -316,31 +319,31 @@ export function useInvoiceForm({ initialInvoice, isEditing = false }: UseInvoice
     setFormData((prev) => ({ ...prev, items: newItems }));
   };
 
-  const calculateSubtotal = () => {
-    return formData.items.reduce((sum, item) => sum + Number(item.amount) * (Number(item.quantity || 1)), 0);
+  // Use shared calculation logic for all financial calculations
+  const getCalculation = () => {
+    return calculateInvoice(
+      formData.items.map((item) => ({
+        amount: Number(item.amount),
+        quantity: Number(item.quantity || 1),
+      })),
+      {
+        type: formData.discountType,
+        value: formData.discountValue,
+      },
+      {
+        tax1Rate: formData.tax1Rate,
+        tax2Rate: formData.tax2Rate,
+      }
+    );
   };
 
-  const calculateDiscount = () => {
-    const subtotal = calculateSubtotal();
-    if (formData.discountType === "percentage") {
-      return (subtotal * formData.discountValue) / 100;
-    }
-    return formData.discountValue;
-  };
-
+  const calculateSubtotal = () => getCalculation().subtotal;
+  const calculateDiscount = () => getCalculation().discount;
   const calculateTax = (rate: number) => {
-    const subtotal = calculateSubtotal();
-    const discount = calculateDiscount();
-    return ((subtotal - discount) * rate) / 100;
+    const calc = getCalculation();
+    return rate === formData.tax1Rate ? calc.tax1 : calc.tax2;
   };
-
-  const calculateTotal = () => {
-    const subtotal = calculateSubtotal();
-    const discount = calculateDiscount();
-    const tax1 = calculateTax(formData.tax1Rate);
-    const tax2 = calculateTax(formData.tax2Rate);
-    return subtotal - discount + tax1 + tax2;
-  };
+  const calculateTotal = () => getCalculation().total;
 
   const handleSubmit = async (action: "draft" | "send") => {
     if (!formData.clientId) {
@@ -376,7 +379,7 @@ export function useInvoiceForm({ initialInvoice, isEditing = false }: UseInvoice
                   tax1Rate: formData.tax1Rate,
                   tax2Name: formData.tax2Name,
                   tax2Rate: formData.tax2Rate,
-                  discountType: formData.discountType,
+                  discountType: formData.discountType.toUpperCase(),
                   discountValue: formData.discountValue,
                 }),
             acceptCreditCards: formData.acceptCreditCards,
@@ -410,7 +413,7 @@ export function useInvoiceForm({ initialInvoice, isEditing = false }: UseInvoice
             tax1Rate: formData.tax1Rate,
             tax2Name: formData.tax2Name,
             tax2Rate: formData.tax2Rate,
-            discountType: formData.discountType,
+            discountType: formData.discountType.toUpperCase(),
             discountValue: formData.discountValue,
             acceptCreditCards: formData.acceptCreditCards,
           }),
@@ -419,6 +422,30 @@ export function useInvoiceForm({ initialInvoice, isEditing = false }: UseInvoice
         const result = await response.json();
         if (!response.ok || !result.success) {
           throw new Error(result.error || "Failed to create invoice");
+        }
+
+        // If the user chose "send", call the sendInvoice mutation to transition and email the invoice.
+        if (action === "send") {
+          try {
+            const sendResponse = await fetch("/api/trpc/invoice.sendInvoice", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ id: result.invoice.id }),
+            });
+
+            const sendData = await sendResponse.json();
+            if (!sendResponse.ok || sendData.error) {
+              console.error("Failed to send invoice:", sendData);
+              toast.error("Invoice created but failed to send");
+              router.push("/invoices");
+              return;
+            }
+          } catch (err) {
+            console.error("Error sending invoice:", err);
+            toast.error("Invoice created but failed to send");
+            router.push("/invoices");
+            return;
+          }
         }
 
         toast.success(`Invoice ${action === "draft" ? "saved as draft" : "created and sent"} successfully`);

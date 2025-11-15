@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { calculateInvoice } from "@/lib/invoice-calculations";
 // Strongly-typed request bodies for the PUT handler
 type InvoiceItemInput = {
   description: string;
@@ -30,6 +31,7 @@ type InvoiceUpdateData = {
   tax?: number;
   total?: number;
   discount?: number;
+  discountValue?: number;
   discountType?: string;
   tax1Name?: string;
   tax1Rate?: number;
@@ -153,27 +155,31 @@ export async function PUT(
     // Update financial fields if provided (allowed regardless of invoice status, except when deleted)
     const shouldReplaceItems = Boolean(items && Array.isArray(items));
     if (shouldReplaceItems && items) {
-      // Recalculate totals
-      const subtotal = items.reduce((sum: number, item: InvoiceItemInput) => sum + (Number(item.amount) * (item.quantity || 1)), 0);
-      const discount =
-        (discountType && discountType.toLowerCase() === "percentage")
-          ? (subtotal * (discountValue || 0)) / 100
-          : discountValue || 0;
-      const tax1 =
-        tax1Rate && tax1Rate > 0
-          ? ((subtotal - discount) * tax1Rate) / 100
-          : 0;
-      const tax2 =
-        tax2Rate && tax2Rate > 0
-          ? ((subtotal - discount) * tax2Rate) / 100
-          : 0;
-      const total = subtotal - discount + tax1 + tax2;
+      // Normalize discountType to uppercase for consistency with database
+      const normalizedDiscountType = (discountType || "PERCENTAGE").toUpperCase();
 
-      updateData.subtotal = subtotal;
-      updateData.tax = tax1 + tax2;
-      updateData.total = total;
-      updateData.discount = discount;
-      updateData.discountType = discountType || "PERCENTAGE";
+      // Recalculate totals using shared calculation logic
+      const calculation = calculateInvoice(
+        items.map((item: InvoiceItemInput) => ({
+          amount: Number(item.amount),
+          quantity: item.quantity || 1,
+        })),
+        {
+          type: normalizedDiscountType,
+          value: discountValue || 0,
+        },
+        {
+          tax1Rate: tax1Rate || 0,
+          tax2Rate: tax2Rate || 0,
+        }
+      );
+
+      updateData.subtotal = calculation.subtotal;
+      updateData.tax = calculation.tax;
+      updateData.total = calculation.total;
+      updateData.discount = calculation.discount;
+      updateData.discountValue = discountValue || 0;
+      updateData.discountType = normalizedDiscountType;
     }
 
     if (tax1Name !== undefined) updateData.tax1Name = tax1Name;

@@ -10,7 +10,7 @@ export interface InvoiceItemData {
   id: string;
   description: string;
   amount: number;
-  quantity?: number;
+  quantity?: number | string;
   showQuantity?: boolean;
 }
 
@@ -78,8 +78,22 @@ export function InvoiceItem({
                     disabled={disabled}
                     min="1"
                     step="1"
-                    value={item.quantity === undefined || item.quantity === 0 ? 1 : item.quantity}
-                    onChange={(e) => onChange("quantity", Math.max(1, Number(e.target.value) || 1))}
+                    value={
+                      item.quantity === "" 
+                        ? "" 
+                        : item.quantity === undefined || item.quantity === 0 
+                          ? 1 
+                          : item.quantity
+                    }
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === "") {
+                        onChange("quantity", "");
+                        return;
+                      }
+                      const parsed = Number(value);
+                      onChange("quantity", Math.max(1, parsed || 1));
+                    }}
                     placeholder="1"
                   />
 

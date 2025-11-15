@@ -129,6 +129,11 @@ const styles = StyleSheet.create({
     textAlign: "right",
     fontWeight: "bold",
   },
+  quantityMeta: {
+    fontSize: 10,
+    color: "#6b7280",
+    fontWeight: "normal",
+  },
   calculations: {
     alignSelf: "flex-end",
     width: 200,
@@ -256,30 +261,16 @@ const InvoicePDF = ({ invoice }: { invoice: Invoice }) => {
     });
   };
 
-  const calculateTaxAmount = (rate: number, subtotal: number) => {
-    return (subtotal * rate) / 100;
-  };
-
-  const subtotal = invoice.items.reduce(
-    (sum, item) => sum + Number(item.amount),
-    0
-  );
-  const discountAmount =
-    invoice.discountType === "PERCENTAGE"
-      ? (subtotal * invoice.discount) / 100
-      : invoice.discount;
-  const afterDiscount = subtotal - discountAmount;
-
-  const tax1Amount =
-    invoice.tax1Rate > 0
-      ? calculateTaxAmount(invoice.tax1Rate, afterDiscount)
-      : 0;
-  const tax2Amount =
-    invoice.tax2Rate > 0
-      ? calculateTaxAmount(invoice.tax2Rate, afterDiscount)
-      : 0;
-  const totalTax = tax1Amount + tax2Amount;
-  const total = afterDiscount + totalTax;
+  // Use stored calculated values from database for display
+  // This preserves the exact values that were calculated when invoice was created
+  const subtotal = Number(invoice.subtotal);
+  const discountAmount = Number(invoice.discount);
+  const total = Number(invoice.total);
+  
+  // Calculate individual tax amounts for display breakdown
+  const taxableAmount = subtotal - discountAmount;
+  const tax1Amount = invoice.tax1Rate > 0 ? (taxableAmount * Number(invoice.tax1Rate)) / 100 : 0;
+  const tax2Amount = invoice.tax2Rate > 0 ? (taxableAmount * Number(invoice.tax2Rate)) / 100 : 0;
 
   return (
     <Document>
@@ -338,22 +329,36 @@ const InvoicePDF = ({ invoice }: { invoice: Invoice }) => {
               Amount
             </Text>
           </View>
-          {invoice.items.map((item, index) => (
-            <View
-              key={item.id}
-              style={[
-                styles.tableRow,
-                index % 2 === 0 ? styles.tableRowEven : {},
-              ]}
-            >
-              <Text style={[styles.tableCell, styles.descriptionCell]}>
-                {item.description}
-              </Text>
-              <Text style={[styles.tableCell, styles.amountCell]}>
-                {formatCurrency(Number(item.amount), invoice.currency)}
-              </Text>
-            </View>
-          ))}
+          {invoice.items.map((item, index) => {
+            const quantity = Number(item.quantity || 1);
+            const lineTotal = Number(item.amount) * quantity;
+            return (
+              <View
+                key={item.id}
+                style={[
+                  styles.tableRow,
+                  index % 2 === 0 ? styles.tableRowEven : {},
+                ]}
+              >
+                <Text style={[styles.tableCell, styles.descriptionCell]}>
+                  {item.description}
+                  {quantity > 1 && (
+                    <Text style={styles.quantityMeta}> × {quantity}</Text>
+                  )}
+                </Text>
+                <Text style={[styles.tableCell, styles.amountCell]}>
+                  {formatCurrency(lineTotal, invoice.currency)}
+                  {quantity > 1 && (
+                    <Text style={styles.quantityMeta}>
+                      {" "}
+                      ({formatCurrency(Number(item.amount), invoice.currency)}
+                      {" × " + quantity})
+                    </Text>
+                  )}
+                </Text>
+              </View>
+            );
+          })}
         </View>
 
         {/* Calculations */}

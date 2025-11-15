@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Download, User, Mail, CreditCard } from "lucide-react";
 import { generateInvoicePDF } from "@/lib/pdf-generator";
 import { PaymentForm } from "@/components/payments/payment-form";
+import { calculateInvoice } from "@/lib/invoice-calculations";
 
 interface InvoiceItem {
   id: string;
@@ -103,30 +104,17 @@ export function PublicInvoiceDisplay({ invoice }: PublicInvoiceDisplayProps) {
     }
   };
 
-  const calculateTaxAmount = (rate: number, subtotal: number) => {
-    return (subtotal * rate) / 100;
-  };
-
-  const subtotal = invoice.items.reduce(
-    (sum, item) => sum + Number(item.amount),
-    0
-  );
-  const discountAmount =
-    invoice.discountType === "PERCENTAGE"
-      ? (subtotal * invoice.discount) / 100
-      : invoice.discount;
-  const afterDiscount = subtotal - discountAmount;
-
-  const tax1Amount =
-    invoice.tax1Rate > 0
-      ? calculateTaxAmount(invoice.tax1Rate, afterDiscount)
-      : 0;
-  const tax2Amount =
-    invoice.tax2Rate > 0
-      ? calculateTaxAmount(invoice.tax2Rate, afterDiscount)
-      : 0;
+  // Use stored calculated values from database for display
+  // This preserves the exact values that were calculated when invoice was created
+  const subtotal = Number(invoice.subtotal);
+  const discountAmount = Number(invoice.discount);
+  const total = Number(invoice.total);
+  
+  // Calculate individual tax amounts for display breakdown
+  const taxableAmount = subtotal - discountAmount;
+  const tax1Amount = invoice.tax1Rate > 0 ? (taxableAmount * Number(invoice.tax1Rate)) / 100 : 0;
+  const tax2Amount = invoice.tax2Rate > 0 ? (taxableAmount * Number(invoice.tax2Rate)) / 100 : 0;
   const totalTax = tax1Amount + tax2Amount;
-  const total = afterDiscount + totalTax;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 print:bg-white print:py-0">
@@ -231,34 +219,45 @@ export function PublicInvoiceDisplay({ invoice }: PublicInvoiceDisplayProps) {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 px-4 font-semibold text-gray-900 print:text-sm">
-                        Description
-                      </th>
-                      <th className="text-right py-3 px-4 font-semibold text-gray-900 print:text-sm">
-                        Amount
-                      </th>
-                    </tr>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 px-4 font-semibold text-gray-900 print:text-sm">
+                      Description
+                    </th>
+                    <th className="text-right py-3 px-4 font-semibold text-gray-900 print:text-sm">
+                      Amount
+                    </th>
+                  </tr>
                   </thead>
                   <tbody>
-                    {invoice.items.map((item, index) => (
-                      <tr
-                        key={item.id}
-                        className={`${
-                          index % 2 === 0 ? "bg-gray-50" : "bg-white"
-                        } print:bg-white`}
-                      >
-                        <td className="py-3 px-4 text-gray-900 print:text-sm">
-                          {item.description}
-                        </td>
-                        <td className="py-3 px-4 text-right font-medium text-gray-900 print:text-sm">
-                          {formatCurrency(
-                            Number(item.amount),
-                            invoice.currency
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                    {invoice.items.map((item, index) => {
+                      const quantity = Number(item.quantity || 1);
+                      const lineTotal = Number(item.amount) * quantity;
+                      return (
+                        <tr
+                          key={item.id}
+                          className={`${
+                            index % 2 === 0 ? "bg-gray-50" : "bg-white"
+                          } print:bg-white`}
+                        >
+                          <td className="py-3 px-4 text-gray-900 print:text-sm">
+                            {item.description}
+                            {quantity > 1 && (
+                              <span className="text-xs text-gray-500 ml-2">
+                                × {quantity}
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-right font-medium text-gray-900 print:text-sm">
+                            {formatCurrency(lineTotal, invoice.currency)}
+                            {quantity > 1 && (
+                              <span className="text-xs text-gray-500 ml-2">
+                                {formatCurrency(Number(item.amount), invoice.currency)} × {quantity}
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

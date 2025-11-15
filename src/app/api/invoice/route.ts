@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { calculateInvoice } from "@/lib/invoice-calculations";
+import { Prisma, InvoiceStatus } from "@prisma/client";
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,19 +47,39 @@ export async function POST(request: NextRequest) {
       acceptCreditCards?: boolean;
     } = body;
 
+    // Normalize discountType to uppercase for consistency with database
+    const normalizedDiscountType = (discountType || "PERCENTAGE").toUpperCase();
+
+    // Calculate invoice totals using shared calculation logic
+    const calculation = calculateInvoice(
+      items.map((item) => ({
+        amount: Number(item.amount),
+        quantity: item.quantity || 1,
+      })),
+      {
+        type: normalizedDiscountType,
+        value: discountValue || 0,
+      },
+      {
+        tax1Rate: tax1Rate || 0,
+        tax2Rate: tax2Rate || 0,
+      }
+    );
+
     // Create invoice with items
     const invoice = await db.invoice.create({
       data: {
         shareId: `share-${Date.now()}`,
         number,
         date: new Date(date),
-        subtotal: items.reduce((sum: number, item) => sum + (Number(item.amount) * (item.quantity || 1)), 0),
-        tax: 0,
-        total: items.reduce((sum: number, item) => sum + (Number(item.amount) * (item.quantity || 1)), 0),
+        subtotal: calculation.subtotal,
+        tax: calculation.tax,
+        total: calculation.total,
         currency: "USD",
         notes: notes || null,
-        discount: discountValue || 0,
-        discountType: discountType || "PERCENTAGE",
+        discount: calculation.discount,
+        discountValue: discountValue || 0,
+        discountType: normalizedDiscountType,
         tax1Name: tax1Name || null,
         tax1Rate: tax1Rate || 0,
         tax2Name: tax2Name || null,
@@ -108,13 +130,7 @@ export async function GET(request: NextRequest) {
     const status = request.nextUrl.searchParams.get("status") ?? "ALL";
 
     // Build where clause based on status filter
-    type WhereClause = {
-      userId: string;
-      deleted?: boolean;
-      status?: string;
-    };
-    
-    const where: WhereClause = { userId: session.user.id };
+    const where: Prisma.InvoiceWhereInput = { userId: session.user.id };
 
     if (status === "DELETED") {
       // Show only deleted invoices
@@ -124,7 +140,7 @@ export async function GET(request: NextRequest) {
       where.deleted = false;
       // If status is specified and not "ALL", filter by status
       if (status !== "ALL") {
-        where.status = status.toUpperCase();
+        where.status = status.toUpperCase() as InvoiceStatus;
       }
     }
 
