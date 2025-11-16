@@ -69,7 +69,6 @@ export async function POST(request: NextRequest) {
     // Create invoice with items
     const invoice = await db.invoice.create({
       data: {
-        shareId: `share-${Date.now()}`,
         number,
         date: new Date(date),
         subtotal: calculation.subtotal,

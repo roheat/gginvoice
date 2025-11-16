@@ -14,7 +14,6 @@ import type { InitialInvoice } from "@/hooks/use-invoice-form";
 
 interface Invoice extends Omit<InitialInvoice, 'notes' | 'tax1Name' | 'tax2Name'> {
   id: string;
-  shareId: string;
   number: string;
   date: string;
   dueDate: string | null;

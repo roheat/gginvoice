@@ -3,7 +3,7 @@
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { MainContent } from "@/components/dashboard/main-content";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit, Eye } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -18,7 +18,6 @@ import {
 
 interface Invoice {
   id: string;
-  shareId: string;
   number: string;
   date: string;
   status: string;
@@ -186,7 +185,7 @@ export default function InvoicesPage() {
                                 size="sm"
                                 onClick={() =>
                                   window.open(
-                                    `/invoices/${invoice.shareId}`,
+                                    `/invoices/public/${invoice.id}`,
                                     "_blank"
                                   )
                                 }

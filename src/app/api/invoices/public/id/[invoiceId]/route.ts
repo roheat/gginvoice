@@ -3,12 +3,12 @@ import { db } from "@/lib/db";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ shareId: string }> }
+  { params }: { params: Promise<{ invoiceId: string }> }
 ) {
   try {
-    const { shareId } = await params;
+    const { invoiceId } = await params;
 
-    if (!shareId) {
+    if (!invoiceId) {
       return NextResponse.json(
         { success: false, error: "Invoice ID is required" },
         { status: 400 }
@@ -17,7 +17,7 @@ export async function GET(
 
     const invoice = await db.invoice.findUnique({
       where: {
-        shareId: shareId,
+        id: invoiceId,
       },
       include: {
         client: true,
@@ -54,7 +54,7 @@ export async function GET(
       invoice,
     });
   } catch (error) {
-    console.error("Error fetching public invoice:", error);
+    console.error("Error fetching public invoice by id:", error);
     return NextResponse.json(
       {
         success: false,
@@ -64,3 +64,4 @@ export async function GET(
     );
   }
 }
+

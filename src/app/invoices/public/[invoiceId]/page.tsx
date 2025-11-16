@@ -4,23 +4,23 @@ import { PublicInvoiceDisplay } from "@/components/invoices/public-invoice-displ
 
 interface PageProps {
   params: Promise<{
-    id: string;
+    invoiceId: string;
   }>;
 }
+
+const buildInvoiceUrl = (invoiceId: string) => {
+  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+  return `${baseUrl}/api/invoices/public/id/${invoiceId}`;
+};
 
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   try {
-    const { id } = await params;
-    const response = await fetch(
-      `${
-        process.env.NEXTAUTH_URL || "http://localhost:3000"
-      }/api/invoices/public/${id}`,
-      {
-        cache: "no-store",
-      }
-    );
+    const { invoiceId } = await params;
+    const response = await fetch(buildInvoiceUrl(invoiceId), {
+      cache: "no-store",
+    });
 
     if (!response.ok) {
       return {
@@ -53,17 +53,12 @@ export async function generateMetadata({
   }
 }
 
-export default async function PublicInvoicePage({ params }: PageProps) {
+export default async function PublicInvoiceByIdPage({ params }: PageProps) {
   try {
-    const { id } = await params;
-    const response = await fetch(
-      `${
-        process.env.NEXTAUTH_URL || "http://localhost:3000"
-      }/api/invoices/public/${id}`,
-      {
-        cache: "no-store",
-      }
-    );
+    const { invoiceId } = await params;
+    const response = await fetch(buildInvoiceUrl(invoiceId), {
+      cache: "no-store",
+    });
 
     if (!response.ok) {
       notFound();
@@ -77,3 +72,4 @@ export default async function PublicInvoicePage({ params }: PageProps) {
     notFound();
   }
 }
+

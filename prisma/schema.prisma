@@ -42,7 +42,6 @@ model Client {
 
 model Invoice {
   id             String         @id @default(cuid())
-  shareId        String         @unique
   number         String
   date           DateTime       @default(now())
   dueDate        DateTime?
@@ -77,7 +76,6 @@ model Invoice {
   items          InvoiceItem[]
   payments       Payment[]
 
-  @@index([shareId])
   @@index([userId])
 }
 

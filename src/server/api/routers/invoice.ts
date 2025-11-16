@@ -64,7 +64,6 @@ export const invoiceRouter = router({
       return await ctx.db.invoice.create({
         data: {
           updatedAt: new Date(),
-          shareId: `share-${Date.now()}`,
           clientId: input.clientId,
           userId: ctx.session.user.id,
           number: input.number,

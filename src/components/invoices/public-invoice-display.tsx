@@ -51,7 +51,6 @@ interface User {
 
 interface Invoice {
   id: string;
-  shareId: string;
   number: string;
   date: string;
   dueDate: string | null;
