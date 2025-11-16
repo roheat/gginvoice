@@ -2,7 +2,7 @@ export function createInvoiceEmail(invoice: any) {
   const appUrl =
     process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || "";
   const base = appUrl.replace(/\/$/, "");
-  const publicLink = `${base}/invoices/public/${invoice.shareId}`;
+  const publicLink = `${base}/invoices/${invoice.shareId}`;
 
   const clientName = invoice.client?.name || invoice.client?.email || "Client";
   const subject = `Invoice ${invoice.number} for ${clientName}`;
