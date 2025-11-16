@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectTrigger,
@@ -165,6 +166,15 @@ function AccountSettingsForm() {
           value={settings?.companyName ?? ""}
           onChange={(e) => handleChange("companyName", e.target.value)}
           placeholder="Your company name"
+        />
+      </div>
+      <div>
+        <Label htmlFor="companyAddress">Company Address</Label>
+        <Textarea
+          id="companyAddress"
+          value={settings?.companyAddress ?? ""}
+          onChange={(e) => handleChange("companyAddress", e.target.value)}
+          placeholder="123 Main St, City, State, ZIP"
         />
       </div>
       <div>

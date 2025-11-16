@@ -28,6 +28,9 @@ interface Invoice {
 interface InvoiceActionsProps {
   invoice: Invoice;
   onActionSuccess: () => void;
+  onSaveDraft?: () => void;
+  isSavingDraft?: boolean;
+  isDraftDirty?: boolean;
 }
 
 type ModalType = null | "send" | "pay" | "refund" | "delete";
@@ -35,6 +38,9 @@ type ModalType = null | "send" | "pay" | "refund" | "delete";
 export function InvoiceActions({
   invoice,
   onActionSuccess,
+  onSaveDraft,
+  isSavingDraft,
+  isDraftDirty,
 }: InvoiceActionsProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [activeModal, setActiveModal] = useState<ModalType>(null);
@@ -68,6 +74,10 @@ export function InvoiceActions({
     setRefundRef("");
     setRefundNotes("");
   };
+  const isSavingDraftState = isSavingDraft ?? false;
+  const isDraftDirtyState = isDraftDirty ?? true;
+  const showDraftButton = Boolean(onSaveDraft);
+  const draftButtonDisabled = isSavingDraftState || !isDraftDirtyState || isLoading;
 
   const handleSend = async () => {
     if (!canSend) return;
@@ -286,12 +296,23 @@ export function InvoiceActions({
   return (
     <>
       <div className="flex flex-col gap-2">
+        {/* Save Draft Button */}
+        {showDraftButton && onSaveDraft && (
+          <Button
+            variant="default"
+            onClick={onSaveDraft}
+            disabled={draftButtonDisabled}
+            className="w-full"
+          >
+            {isSavingDraftState ? "Saving..." : "Update"}
+          </Button>
+        )}
         {/* Send Invoice */}
         {canSend && (
           <Button
             onClick={() => setActiveModal("send")}
             variant="outline"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-black border-blue-600"
             disabled={isLoading}
           >
             <Send className="h-4 w-4" />

@@ -181,12 +181,15 @@ export default function EditInvoicePage() {
         <InvoiceForm 
           initialInvoice={invoice}
           isEditing={true}
-          invoiceActions={
+          invoiceActions={({ onSaveDraft, isSavingDraft, isDraftDirty }) => (
             <InvoiceActions 
               invoice={invoice}
               onActionSuccess={handleActionSuccess}
+              onSaveDraft={onSaveDraft}
+              isSavingDraft={isSavingDraft}
+              isDraftDirty={isDraftDirty}
             />
-          }
+          )}
         />
       </MainContent>
     </DashboardLayout>

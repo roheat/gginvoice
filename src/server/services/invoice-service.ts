@@ -6,6 +6,11 @@ type InvoiceWithRelations = Prisma.InvoiceGetPayload<{
   include: {
     client: true;
     items: true;
+    user: {
+      include: {
+        settings: true;
+      };
+    };
   };
 }>;
 
@@ -88,6 +93,11 @@ export const invoiceService = {
           include: {
             client: true,
             items: true,
+            user: {
+              include: {
+                settings: true,
+              },
+            },
           },
         });
         return {
@@ -117,6 +127,11 @@ export const invoiceService = {
           include: {
             client: true,
             items: true,
+            user: {
+              include: {
+                settings: true,
+              },
+            },
           },
         });
 
@@ -230,6 +245,11 @@ export const invoiceService = {
           include: {
             client: true,
             items: true,
+            user: {
+              include: {
+                settings: true,
+              },
+            },
           },
         });
 
@@ -323,6 +343,11 @@ export const invoiceService = {
           include: {
             client: true,
             items: true,
+            user: {
+              include: {
+                settings: true,
+              },
+            },
           },
         });
 
@@ -387,6 +412,11 @@ export const invoiceService = {
           include: {
             client: true,
             items: true,
+            user: {
+              include: {
+                settings: true,
+              },
+            },
           },
         });
         return {
@@ -406,6 +436,11 @@ export const invoiceService = {
           include: {
             client: true,
             items: true,
+            user: {
+              include: {
+                settings: true,
+              },
+            },
           },
         });
 
@@ -465,6 +500,11 @@ export const invoiceService = {
           include: {
             client: true,
             items: true,
+            user: {
+              include: {
+                settings: true,
+              },
+            },
           },
         });
         return {
@@ -484,6 +524,11 @@ export const invoiceService = {
           include: {
             client: true,
             items: true,
+            user: {
+              include: {
+                settings: true,
+              },
+            },
           },
         });
 

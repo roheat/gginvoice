@@ -40,10 +40,16 @@ const LANGUAGES = [
   { value: "de", label: "German" },
 ];
 
+interface InvoiceActionsSlotProps {
+  onSaveDraft: () => void;
+  isSavingDraft: boolean;
+  isDraftDirty: boolean;
+}
+
 interface InvoiceFormProps {
   initialInvoice?: InitialInvoice;
   isEditing?: boolean;
-  invoiceActions?: React.ReactNode;
+  invoiceActions?: (props: InvoiceActionsSlotProps) => React.ReactNode;
 }
 
 export function InvoiceForm({ initialInvoice, isEditing = false, invoiceActions }: InvoiceFormProps) {
@@ -415,15 +421,11 @@ export function InvoiceForm({ initialInvoice, isEditing = false, invoiceActions 
         {isEditing && invoiceActions ? (
           <Card>
             <CardContent className="space-y-2">
-              <Button
-                variant="outline"
-                onClick={() => handleSubmit("draft")}
-                disabled={isSubmitting || !isDirty}
-                className="w-full"
-              >
-                {isSubmitting ? "Saving..." : "Update"}
-              </Button>
-              {invoiceActions}
+              {invoiceActions({
+                onSaveDraft: () => handleSubmit("draft"),
+                isSavingDraft: isSubmitting,
+                isDraftDirty: isDirty,
+              })}
             </CardContent>
           </Card>
         ) : (
