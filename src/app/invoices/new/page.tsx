@@ -4,9 +4,6 @@ import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { MainContent } from "@/components/dashboard/main-content";
 import { InvoiceForm } from "@/components/invoices/invoice-form";
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 
 export default function NewInvoicePage() {

@@ -278,7 +278,7 @@ export function useInvoiceForm({ initialInvoice, isEditing = false }: UseInvoice
       discountType: (formData.discountType || "percentage").toLowerCase(),
       discountValue: formData.discountValue || 0,
       acceptPayments: !!formData.acceptCreditCards,
-      items: (formData.items || []).map((it: { description?: string; amount?: number | string; quantity?: number }) => ({
+      items: (formData.items || []).map((it) => ({
         description: it.description || "",
         amount: Number(it.amount || 0),
         quantity: Number(it.quantity || 1),

@@ -6,7 +6,6 @@ import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { MainContent } from "@/components/dashboard/main-content";
 import { ClientForm } from "@/components/clients/client-form";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type Client = {
   id: string;

@@ -80,15 +80,17 @@ export async function POST() {
       url: accountLink.url,
       accountId: account.id,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Stripe Connect error:", error);
+
+    const stripeError = error as { type?: string; raw?: { message?: string }; message?: string };
 
     // Check if it's a Connect not enabled error
     if (
-      error?.type === "StripeInvalidRequestError" &&
-      (error?.raw?.message?.includes("signed up for Connect") ||
-        error?.raw?.message?.includes("review the responsibilities") ||
-        error?.raw?.message?.includes("platform-profile"))
+      stripeError?.type === "StripeInvalidRequestError" &&
+      (stripeError?.raw?.message?.includes("signed up for Connect") ||
+        stripeError?.raw?.message?.includes("review the responsibilities") ||
+        stripeError?.raw?.message?.includes("platform-profile"))
     ) {
       return NextResponse.json(
         {
@@ -104,8 +106,8 @@ export async function POST() {
 
     // Check if it's a geographic restriction error
     if (
-      error?.type === "StripeInvalidRequestError" &&
-      error?.raw?.message?.includes("cannot be created by platforms in")
+      stripeError?.type === "StripeInvalidRequestError" &&
+      stripeError?.raw?.message?.includes("cannot be created by platforms in")
     ) {
       return NextResponse.json(
         {
@@ -121,8 +123,8 @@ export async function POST() {
 
     // Check if it's a business type error
     if (
-      error?.type === "StripeInvalidRequestError" &&
-      error?.raw?.message?.includes("not a supported business type")
+      stripeError?.type === "StripeInvalidRequestError" &&
+      stripeError?.raw?.message?.includes("not a supported business type")
     ) {
       return NextResponse.json(
         {
@@ -140,7 +142,7 @@ export async function POST() {
       {
         success: false,
         error: "Failed to create Stripe account",
-        details: error?.message || "Unknown error",
+        details: stripeError?.message || "Unknown error",
       },
       { status: 500 }
     );

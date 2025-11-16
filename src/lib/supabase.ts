@@ -56,7 +56,7 @@ export async function uploadCompanyLogo(userId: string, file: File) {
   const filePath = `${userId}/${fileName}`
 
   // Upload file using admin client (bypasses RLS)
-  const { data, error } = await supabaseAdmin.storage
+  const { error } = await supabaseAdmin.storage
     .from('gginvoice-client-logos')
     .upload(filePath, file, {
       cacheControl: '3600',

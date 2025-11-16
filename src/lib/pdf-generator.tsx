@@ -347,6 +347,7 @@ const InvoicePDF = ({ invoice }: { invoice: Invoice }) => {
       <Page size="A4" style={styles.page}>
         {/* Logo */}
         {invoice.user.settings?.companyLogoUrl && (
+          // eslint-disable-next-line jsx-a11y/alt-text
           <Image 
             src={invoice.user.settings.companyLogoUrl} 
             style={styles.logo}

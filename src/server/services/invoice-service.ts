@@ -1,10 +1,24 @@
 import { db } from "@/lib/db";
-import { InvoiceStatus } from "@prisma/client";
+import { InvoiceStatus, Prisma } from "@prisma/client";
+
+// Type for invoice with relations
+type InvoiceWithRelations = Prisma.InvoiceGetPayload<{
+  include: {
+    client: true;
+    items: true;
+  };
+}>;
+
+// Type for invoice event
+type InvoiceEvent = Prisma.InvoiceEventGetPayload<Record<string, never>>;
+
+// Type for basic invoice (without relations)
+type Invoice = Prisma.InvoiceGetPayload<Record<string, never>>;
 
 export interface InvoiceTransitionResult {
   success: boolean;
-  invoice?: any;
-  event?: any;
+  invoice?: InvoiceWithRelations;
+  event?: InvoiceEvent;
   error?: string;
   code?: string;
 }
@@ -23,8 +37,7 @@ export const invoiceService = {
    * Check if an invoice is locked (soft deleted)
    */
   async checkInvoiceGuards(
-    invoice: any,
-    desiredAction: string
+    invoice: Invoice
   ): Promise<InvoiceTransitionError | null> {
     if (invoice.deleted) {
       return {
@@ -59,7 +72,7 @@ export const invoiceService = {
       }
 
       // Guard: check if deleted
-      const guardError = await this.checkInvoiceGuards(invoice, "send");
+      const guardError = await this.checkInvoiceGuards(invoice);
       if (guardError) {
         return {
           success: false,
@@ -70,9 +83,16 @@ export const invoiceService = {
 
       // Idempotent: if already SENT, return success
       if (invoice.status === "SENT") {
+        const invoiceWithRelations = await db.invoice.findUnique({
+          where: { id: invoiceId },
+          include: {
+            client: true,
+            items: true,
+          },
+        });
         return {
           success: true,
-          invoice,
+          invoice: invoiceWithRelations || undefined,
           error: undefined,
         };
       }
@@ -87,7 +107,7 @@ export const invoiceService = {
       }
 
       // Update invoice status and append event in transaction
-      const result = await db.$transaction(async (tx) => {
+      const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
         const updatedInvoice = await tx.invoice.update({
           where: { id: invoiceId },
           data: {
@@ -163,7 +183,7 @@ export const invoiceService = {
       }
 
       // Guard: check if deleted
-      const guardError = await this.checkInvoiceGuards(invoice, "mark-paid");
+      const guardError = await this.checkInvoiceGuards(invoice);
       if (guardError) {
         return {
           success: false,
@@ -198,7 +218,7 @@ export const invoiceService = {
       }
 
       // Update invoice status and append event in transaction — overwrite refs/timestamps
-      const result = await db.$transaction(async (tx) => {
+      const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
         const updatedInvoice = await tx.invoice.update({
           where: { id: invoiceId },
           data: {
@@ -279,7 +299,7 @@ export const invoiceService = {
       }
 
       // Guard: check if deleted
-      const guardError = await this.checkInvoiceGuards(invoice, "refund");
+      const guardError = await this.checkInvoiceGuards(invoice);
       if (guardError) {
         return {
           success: false,
@@ -292,7 +312,7 @@ export const invoiceService = {
       // Overwrite refundRef/refundedAt and record an event; include previous refundRef in notes if present.
       const oldRefundRef = invoice.refundRef;
 
-      const result = await db.$transaction(async (tx) => {
+      const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
         const updatedInvoice = await tx.invoice.update({
           where: { id: invoiceId },
           data: {
@@ -362,15 +382,22 @@ export const invoiceService = {
 
       // Idempotent: if already deleted, return success
       if (invoice.deleted) {
+        const invoiceWithRelations = await db.invoice.findUnique({
+          where: { id: invoiceId },
+          include: {
+            client: true,
+            items: true,
+          },
+        });
         return {
           success: true,
-          invoice,
+          invoice: invoiceWithRelations || undefined,
           error: undefined,
         };
       }
 
       // Soft delete and append event in transaction
-      const result = await db.$transaction(async (tx) => {
+      const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
         const updatedInvoice = await tx.invoice.update({
           where: { id: invoiceId },
           data: {
@@ -433,15 +460,22 @@ export const invoiceService = {
 
       // Idempotent: if already restored, return success
       if (!invoice.deleted) {
+        const invoiceWithRelations = await db.invoice.findUnique({
+          where: { id: invoiceId },
+          include: {
+            client: true,
+            items: true,
+          },
+        });
         return {
           success: true,
-          invoice,
+          invoice: invoiceWithRelations || undefined,
           error: undefined,
         };
       }
 
       // Restore and append event in transaction
-      const result = await db.$transaction(async (tx) => {
+      const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
         const updatedInvoice = await tx.invoice.update({
           where: { id: invoiceId },
           data: {
@@ -505,15 +539,22 @@ export const invoiceService = {
 
       // Skip if already paid (idempotent)
       if (invoice.status === "PAID" && invoice.paymentRef === stripePaymentId) {
+        const invoiceWithRelations = await db.invoice.findUnique({
+          where: { id: invoiceId },
+          include: {
+            client: true,
+            items: true,
+          },
+        });
         return {
           success: true,
-          invoice,
+          invoice: invoiceWithRelations || undefined,
           error: undefined,
         };
       }
 
       // Update invoice and append event in transaction
-      const result = await db.$transaction(async (tx) => {
+      const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
         const updatedInvoice = await tx.invoice.update({
           where: { id: invoiceId },
           data: {

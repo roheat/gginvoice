@@ -44,7 +44,6 @@ export function ClientForm({ initialData, isEditing = false, onSuccess }: Client
         phone: initialData.phone || "",
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData]);
 
   const handleInputChange = (field: keyof ClientFormData, value: string) => {

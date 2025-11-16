@@ -90,6 +90,7 @@ export default function EditInvoicePage() {
     if (invoiceId) {
       fetchInvoice();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [invoiceId]);
 
   const handleActionSuccess = () => {

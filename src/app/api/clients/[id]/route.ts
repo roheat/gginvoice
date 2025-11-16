@@ -4,13 +4,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { z } from "zod";
 
-type ClientUpdateBody = {
-  name?: string;
-  email?: string;
-  address?: string | null;
-  phone?: string | null;
-};
-
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

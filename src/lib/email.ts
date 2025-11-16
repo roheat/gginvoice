@@ -1,10 +1,12 @@
+import { Decimal } from "@prisma/client/runtime/library";
+
 export function createInvoiceEmail(invoice: {
   id: string;
   number: string;
   currency: string;
-  total: number;
-  client?: { name?: string; email?: string };
-  user?: { name?: string };
+  total: number | Decimal;
+  client?: { name?: string | null; email?: string | null };
+  user?: { name?: string | null };
 }) {
   const appUrl =
     process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || "";
@@ -13,6 +15,7 @@ export function createInvoiceEmail(invoice: {
 
   const clientName = invoice.client?.name || invoice.client?.email || "Client";
   const subject = `Invoice ${invoice.number} for ${clientName}`;
+  const totalAmount = typeof invoice.total === 'number' ? invoice.total : invoice.total.toNumber();
 
   const html = `
     <div style="font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; color: #111; line-height:1.4">
@@ -20,7 +23,7 @@ export function createInvoiceEmail(invoice: {
       <p>Hi ${clientName},</p>
       <p>${invoice.user?.name ? `${invoice.user.name} has` : "You have"} received an invoice.</p>
       <p>
-        <strong>Amount:</strong> ${invoice.currency} ${invoice.total}
+        <strong>Amount:</strong> ${invoice.currency} ${totalAmount}
       </p>
       <p>
         <a href="${publicLink}" style="display:inline-block;padding:10px 16px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none">
@@ -33,7 +36,7 @@ export function createInvoiceEmail(invoice: {
     </div>
   `;
 
-  const text = `Invoice ${invoice.number}\n\nAmount: ${invoice.currency} ${invoice.total}\n\nView invoice: ${publicLink}`;
+  const text = `Invoice ${invoice.number}\n\nAmount: ${invoice.currency} ${totalAmount}\n\nView invoice: ${publicLink}`;
 
   return { subject, html, text };
 }
