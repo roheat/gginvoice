@@ -30,6 +30,7 @@ import {
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { LogoUpload } from "@/components/settings/logo-upload";
+import { useOnboardingProgress } from "@/contexts/onboarding-context";
 
 type Settings = {
   companyName?: string | null;
@@ -48,6 +49,7 @@ function AccountSettingsForm() {
   const [initialSettings, setInitialSettings] = useState<Settings | null>(null);
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [saving, setSaving] = useState(false);
+  const { refetch: refreshOnboarding } = useOnboardingProgress();
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -117,6 +119,8 @@ function AccountSettingsForm() {
         setInitialSettings(json.settings || settings);
         setSettings((prev) => ({ ...(prev || {}), ...json.settings }));
         toast.success("Settings updated");
+        // Refresh onboarding progress
+        refreshOnboarding();
       } else {
         toast.error(json.error || "Failed to update settings");
       }
@@ -363,9 +367,26 @@ export default function SettingsPage() {
         subtitle="Manage your account and application settings"
       />
       <MainContent>
+<<<<<<< Updated upstream
       <div className="space-y-6 mx-10">
           {/* Stripe Payment Integration */}
+=======
+      <div className="mx-10 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="col-span-1">
+
+
+>>>>>>> Stashed changes
           <Card>
+            <CardHeader>
+              <h2 className="text-lg font-bold text-gray-900">Company Information</h2>
+            </CardHeader>
+            <CardContent>
+              <AccountSettingsForm />
+            </CardContent>
+          </Card>
+
+          {/* Stripe Payment Integration */}
+          <Card className="mt-6">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
@@ -486,6 +507,7 @@ export default function SettingsPage() {
               )}
             </CardContent>
           </Card>
+<<<<<<< Updated upstream
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card className="bg-white shadow-sm rounded-lg md:col-span-2">
             <CardHeader>
@@ -495,6 +517,8 @@ export default function SettingsPage() {
               <AccountSettingsForm />
             </CardContent>
           </Card>
+=======
+>>>>>>> Stashed changes
         </div>
             </div>
       </MainContent>

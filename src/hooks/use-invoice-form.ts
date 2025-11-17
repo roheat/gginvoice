@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { InvoiceItemData } from "@/components/invoices/invoice-item";
 import { calculateInvoice } from "@/lib/invoice-calculations";
+import { useOnboardingProgress } from "@/contexts/onboarding-context";
 
 export interface InitialInvoice {
   clientId?: string;
@@ -55,6 +56,7 @@ type UseInvoiceFormArgs = {
 
 export function useInvoiceForm({ initialInvoice, isEditing = false }: UseInvoiceFormArgs) {
   const router = useRouter();
+  const { refetch: refreshOnboarding } = useOnboardingProgress();
 
   const getInitialFormData = (): InvoiceFormData => {
     if (initialInvoice) {
@@ -423,6 +425,9 @@ export function useInvoiceForm({ initialInvoice, isEditing = false }: UseInvoice
         if (!response.ok || !result.success) {
           throw new Error(result.error || "Failed to create invoice");
         }
+
+        // Refresh onboarding progress after creating first invoice
+        refreshOnboarding();
 
         // If the user chose "send", call the sendInvoice mutation to transition and email the invoice.
         if (action === "send") {

@@ -3,7 +3,7 @@
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { MainContent } from "@/components/dashboard/main-content";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -87,9 +87,6 @@ export default function ClientsPage() {
       <MainContent>
         <div className="max-w-7xl mx-auto">
           <Card>
-            <CardHeader>
-              <CardTitle>All Clients ({clients.length})</CardTitle>
-            </CardHeader>
             <CardContent>
               {loading ? (
                 <div className="flex items-center justify-center py-8">
@@ -139,7 +136,11 @@ export default function ClientsPage() {
                   </TableHeader>
                   <TableBody>
                     {clients.map((client) => (
-                      <TableRow key={client.id}>
+                      <TableRow 
+                        key={client.id}
+                        className="cursor-pointer"
+                        onClick={() => (window.location.href = `/clients/${client.id}/edit`)}
+                      >
                         <TableCell className="font-medium">
                           {client.name}
                         </TableCell>
@@ -149,19 +150,26 @@ export default function ClientsPage() {
                         <TableCell>
                           {new Date(client.createdAt).toLocaleDateString()}
                         </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end space-x-2">
-                            <Button variant="ghost" size="sm" onClick={() => (window.location.href = `/clients/${client.id}/edit`)}>
-                              <Edit className="h-4 w-4" />
+                        <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-0">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => (window.location.href = `/clients/${client.id}/edit`)}
+                              className="border border-gray-200 -mr-px rounded-l-md rounded-r-none bg-white text-gray-700 hover:bg-gray-50"
+                            >
+                              <Edit className="h-4 w-4 mr-1" />
+                              Edit
                             </Button>
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => handleDeleteClient(client.id)}
-                              className="text-red-600 hover:text-red-700"
+                              className="border border-gray-200 rounded-r-md rounded-l-none bg-white text-red-600 hover:bg-red-50 hover:text-red-700"
                               disabled={deletingId === client.id}
                             >
                               <Trash2 className="h-4 w-4" />
+                              Delete
                             </Button>
                           </div>
                         </TableCell>

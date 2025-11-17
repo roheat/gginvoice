@@ -9,13 +9,13 @@ export async function GET(request: NextRequest) {
 
     if (!accountId) {
       return NextResponse.redirect(
-        `${process.env.NEXTAUTH_URL}/settings/payments?error=missing_account_id`
+        `${process.env.NEXTAUTH_URL}/settings?error=missing_account_id`
       );
     }
 
     if (!stripe) {
       return NextResponse.redirect(
-        `${process.env.NEXTAUTH_URL}/settings/payments?error=stripe_not_configured`
+        `${process.env.NEXTAUTH_URL}/settings?error=stripe_not_configured`
       );
     }
 
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 
     if (!user) {
       return NextResponse.redirect(
-        `${process.env.NEXTAUTH_URL}/settings/payments?error=user_not_found`
+        `${process.env.NEXTAUTH_URL}/settings?error=user_not_found`
       );
     }
 
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
 
     // Redirect back to settings with success message
     const redirectUrl = new URL(
-      `${process.env.NEXTAUTH_URL}/settings/payments`
+      `${process.env.NEXTAUTH_URL}/settings`
     );
 
     if (status === "CONNECTED") {
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("Stripe callback error:", error);
     return NextResponse.redirect(
-      `${process.env.NEXTAUTH_URL}/settings/payments?error=callback_failed`
+      `${process.env.NEXTAUTH_URL}/settings?error=callback_failed`
     );
   }
 }

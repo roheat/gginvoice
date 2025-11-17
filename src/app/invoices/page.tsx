@@ -87,22 +87,22 @@ export default function InvoicesPage() {
         <div className="max-w-7xl mx-auto space-y-3">
 
           {/* Filter Bar */}
-          <div className="flex gap-0">
-            {['ALL', 'DRAFT', 'SENT', 'PAID', 'REFUNDED', 'OVERDUE', 'DELETED'].map((status) => (
-              <Button
-                key={status}
-                variant="ghost"
-                size="sm"
-                onClick={() => setStatusFilter(status)}
-                className={`w-24 border border-gray-200 -ml-px first:ml-0 first:rounded-l-lg last:rounded-r-lg rounded-none last:rounded-r-lg first:rounded-l-lg ${
-                  statusFilter === status
-                    ? "bg-blue-600 text-white hover:bg-blue-700"
-                    : "bg-white text-gray-700 hover:bg-gray-50"
-                }`}
-              >
-                {status}
-              </Button>
-            ))}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end px-4">
+            <div className="mr-2">
+              <p className="text-sm font-semibold text-gray-700">Invoice status</p>
+              <p className="text-xs text-gray-400">Choose a view to filter the list</p>
+            </div>
+            <select
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+              className="max-w-xs rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+            >
+              {["ALL", "DRAFT", "SENT", "PAID", "REFUNDED", "OVERDUE", "DELETED"].map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Invoices Table */}
@@ -158,7 +158,11 @@ export default function InvoicesPage() {
                   </TableHeader>
                   <TableBody>
                     {filteredInvoices.map((invoice) => (
-                        <TableRow key={invoice.id}>
+                        <TableRow 
+                          key={invoice.id}
+                          className="cursor-pointer"
+                          onClick={() => (window.location.href = `/invoices/${invoice.id}/edit`)}
+                        >
                           <TableCell className="font-medium">
                             {invoice.number}
                           </TableCell>
@@ -178,7 +182,7 @@ export default function InvoicesPage() {
                           <TableCell>
                             {invoice.currency} {Number(invoice.total).toFixed(2)}
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-end gap-0">
                               <Button
                                 variant="ghost"
@@ -191,7 +195,7 @@ export default function InvoicesPage() {
                                 }
                                 className="border border-gray-200 -mr-px rounded-l-md rounded-r-none bg-white text-gray-700 hover:bg-gray-50"
                               >
-                                <Eye className="h-4 w-4 mr-1" />
+                                <Eye className="h-4 w-4" />
                                 View
                               </Button>
                               <Button

@@ -375,13 +375,13 @@ export function InvoiceForm({ initialInvoice, isEditing = false, invoiceActions 
                   <AlertDescription>
                     <div className="flex items-center justify-between">
                       <span>Connect Stripe in Settings to accept payments</span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => router.push("/settings/payments")}
-                      >
-                        <CreditCard className="h-4 w-4 mr-2" />
-                        Connect Stripe
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => router.push("/settings")}
+                    >
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      Connect Stripe
                       </Button>
                     </div>
                   </AlertDescription>

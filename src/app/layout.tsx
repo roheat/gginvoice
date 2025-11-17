@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthSessionProvider } from "@/components/providers/session-provider";
 import { TRPCProvider } from "@/components/providers/trpc-provider";
+import { OnboardingProgressProvider } from "@/contexts/onboarding-context";
 import { Toaster } from "sonner";
 
 const inter = Inter({
@@ -25,8 +26,10 @@ export default function RootLayout({
       <body className={`${inter.variable} font-sans antialiased`}>
         <AuthSessionProvider>
           <TRPCProvider>
-            {children}
-            <Toaster />
+            <OnboardingProgressProvider>
+              {children}
+              <Toaster />
+            </OnboardingProgressProvider>
           </TRPCProvider>
         </AuthSessionProvider>
       </body>

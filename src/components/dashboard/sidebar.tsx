@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { OnboardingBanner } from "./onboarding-banner";
 
 interface SidebarProps {
   children: React.ReactNode;
@@ -115,6 +116,7 @@ export function Sidebar({ children }: SidebarProps) {
 
         {/* Page content */}
         <main className="flex-1 relative overflow-y-auto focus:outline-none">
+          <OnboardingBanner username={(session?.user?.name)?.split(' ')[0]}/>
           {children}
         </main>
       </div>
