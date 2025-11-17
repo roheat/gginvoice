@@ -389,7 +389,7 @@ export default function SettingsPage() {
                     <CreditCard className="h-6 w-6 text-blue-600" />
                   </div>
                   <div>
-                    <CardTitle>Payment Processing</CardTitle>
+                    <CardTitle>Payment Integrations</CardTitle>
                     <p className="text-sm text-gray-600 mt-1">
                       {getStatusDescription()}
                     </p>
