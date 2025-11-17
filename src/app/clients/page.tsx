@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -27,6 +28,7 @@ interface Client {
 }
 
 export default function ClientsPage() {
+  const router = useRouter();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -81,7 +83,7 @@ export default function ClientsPage() {
         subtitle="Manage your clients and their information"
         action={{
           label: "Add Client",
-          onClick: () => (window.location.href = "/clients/new"),
+          onClick: () => router.push("/clients/new"),
         }}
       />
       <MainContent>
@@ -116,7 +118,7 @@ export default function ClientsPage() {
                     Start by adding your first client.
                   </p>
                   <Button
-                    onClick={() => (window.location.href = "/clients/new")}
+                    onClick={() => router.push("/clients/new")}
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Add Your First Client
@@ -139,7 +141,7 @@ export default function ClientsPage() {
                       <TableRow 
                         key={client.id}
                         className="cursor-pointer"
-                        onClick={() => (window.location.href = `/clients/${client.id}/edit`)}
+                        onClick={() => router.push(`/clients/${client.id}/edit`)}
                       >
                         <TableCell className="font-medium">
                           {client.name}
@@ -155,7 +157,7 @@ export default function ClientsPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => (window.location.href = `/clients/${client.id}/edit`)}
+                              onClick={() => router.push(`/clients/${client.id}/edit`)}
                               className="border border-gray-200 -mr-px rounded-l-md rounded-r-none bg-white text-gray-700 hover:bg-gray-50"
                             >
                               <Edit className="h-4 w-4 mr-1" />

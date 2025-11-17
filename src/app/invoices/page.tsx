@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit, Eye } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -31,6 +32,7 @@ interface Invoice {
 }
 
 export default function InvoicesPage() {
+  const router = useRouter();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
@@ -80,7 +82,7 @@ export default function InvoicesPage() {
         subtitle="Manage your invoices and track payments"
         action={{
           label: "New Invoice",
-          onClick: () => (window.location.href = "/invoices/new"),
+          onClick: () => router.push("/invoices/new"),
         }}
       />
       <MainContent>
@@ -137,7 +139,7 @@ export default function InvoicesPage() {
                   </p>
                   {statusFilter === "ALL" && (
                     <Button
-                      onClick={() => (window.location.href = "/invoices/new")}
+                      onClick={() => router.push("/invoices/new")}
                     >
                       <Plus className="h-4 w-4" />
                       Create Your First Invoice
@@ -161,7 +163,7 @@ export default function InvoicesPage() {
                         <TableRow 
                           key={invoice.id}
                           className="cursor-pointer"
-                          onClick={() => (window.location.href = `/invoices/${invoice.id}/edit`)}
+                          onClick={() => router.push(`/invoices/${invoice.id}/edit`)}
                         >
                           <TableCell className="font-medium">
                             {invoice.number}
@@ -202,7 +204,7 @@ export default function InvoicesPage() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() =>
-                                  window.location.href = `/invoices/${invoice.id}/edit`
+                                  router.push(`/invoices/${invoice.id}/edit`)
                                 }
                                 className="border border-gray-200 rounded-r-md rounded-l-none bg-white text-gray-700 hover:bg-gray-50"
                               >

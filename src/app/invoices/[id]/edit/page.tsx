@@ -104,12 +104,6 @@ export default function EditInvoicePage() {
         <PageHeader
           title={
             <div className="flex items-center gap-4">
-              <Link href="/invoices">
-                <Button variant="ghost" size="sm">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back
-                </Button>
-              </Link>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">
                   Loading...
@@ -133,12 +127,6 @@ export default function EditInvoicePage() {
         <PageHeader
           title={
             <div className="flex items-center gap-4">
-              <Link href="/invoices">
-                <Button variant="ghost" size="sm">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back
-                </Button>
-              </Link>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Error</h1>
               </div>

@@ -367,15 +367,10 @@ export default function SettingsPage() {
         subtitle="Manage your account and application settings"
       />
       <MainContent>
-<<<<<<< Updated upstream
-      <div className="space-y-6 mx-10">
-          {/* Stripe Payment Integration */}
-=======
       <div className="mx-10 grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="col-span-1">
 
 
->>>>>>> Stashed changes
           <Card>
             <CardHeader>
               <h2 className="text-lg font-bold text-gray-900">Company Information</h2>
@@ -507,18 +502,6 @@ export default function SettingsPage() {
               )}
             </CardContent>
           </Card>
-<<<<<<< Updated upstream
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card className="bg-white shadow-sm rounded-lg md:col-span-2">
-            <CardHeader>
-              <h2 className="text-lg font-medium text-gray-900">Account Settings</h2>
-            </CardHeader>
-            <CardContent>
-              <AccountSettingsForm />
-            </CardContent>
-          </Card>
-=======
->>>>>>> Stashed changes
         </div>
             </div>
       </MainContent>
