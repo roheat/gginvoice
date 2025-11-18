@@ -49,9 +49,15 @@ export async function GET() {
         payoutsEnabled = account.payouts_enabled || false;
 
         // Update status based on current Stripe account state
-        if (chargesEnabled && payoutsEnabled) {
+        // For OAuth Standard Connect, if account is fully operational, mark as CONNECTED
+        if (chargesEnabled && payoutsEnabled && account.details_submitted) {
+          accountStatus = "CONNECTED";
+        } else if (chargesEnabled && payoutsEnabled) {
+          // Account can accept payments but details might be pending
           accountStatus = "CONNECTED";
         } else if (account.details_submitted) {
+          accountStatus = "PENDING";
+        } else {
           accountStatus = "PENDING";
         }
       } catch (error) {
@@ -71,9 +77,11 @@ export async function GET() {
       });
     }
 
+    // User is connected if they have a stripeAccountId (even if status is PENDING)
+    // This allows the UI to show "connected" state even during onboarding
     return NextResponse.json({
       success: true,
-      connected: accountStatus === "CONNECTED",
+      connected: !!user.stripeAccountId, // Connected if account ID exists
       accountId: user.stripeAccountId,
       status: accountStatus,
       onboardingComplete: user.stripeOnboardingComplete,

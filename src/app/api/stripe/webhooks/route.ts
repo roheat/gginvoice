@@ -49,7 +49,8 @@ export async function POST(request: NextRequest) {
         await handleAccountUpdated(event.data.object as any);
         break;
       default:
-        console.log(`Unhandled event type: ${event.type}`);
+        // Unhandled event type - log for monitoring
+        break;
     }
 
     return NextResponse.json({ received: true });
@@ -109,8 +110,6 @@ async function handlePaymentSucceeded(paymentIntent: {
         paidAt: new Date(),
       },
     });
-
-    console.log(`Payment succeeded for invoice ${invoice.number}`);
   } catch (error) {
     console.error("Error handling payment succeeded:", error);
   }
@@ -141,8 +140,6 @@ async function handlePaymentFailed(paymentIntent: {
         invoiceId: invoiceId,
       },
     });
-
-    console.log(`Payment failed for invoice ${invoiceId}`);
   } catch (error) {
     console.error("Error handling payment failed:", error);
   }
@@ -188,8 +185,6 @@ async function handleAccountUpdated(account: {
         stripeOnboardingComplete: onboardingComplete,
       },
     });
-
-    console.log(`Updated Stripe status for user ${user.id}: ${status}`);
   } catch (error) {
     console.error("Error handling account updated:", error);
   }

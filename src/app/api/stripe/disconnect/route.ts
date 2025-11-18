@@ -29,16 +29,19 @@ export async function POST() {
       );
     }
 
-    if (!stripe) {
-      return NextResponse.json({ error: "Stripe not configured" }, { status: 500 });
-    }
-
-    // Delete the Stripe Connect account
-    try {
-      await stripe.accounts.del(user.stripeAccountId);
-    } catch (error) {
-      console.error("Error deleting Stripe account:", error);
-      // Continue even if Stripe deletion fails
+    // For OAuth-connected accounts (Standard Connect), we don't delete the account
+    // The account belongs to the user, we just remove our connection to it
+    // Only attempt deletion for Express accounts (which we created)
+    // For Standard Connect OAuth accounts, deletion will fail silently and that's OK
+    if (stripe) {
+      try {
+        await stripe.accounts.del(user.stripeAccountId);
+      } catch {
+        // Expected to fail for OAuth accounts - that's fine, we just clear our reference
+        console.log(
+          "Account deletion skipped (OAuth account or already deleted)"
+        );
+      }
     }
 
     // Update user to remove Stripe connection

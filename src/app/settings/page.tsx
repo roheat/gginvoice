@@ -26,8 +26,9 @@ import {
   ExternalLink,
   Shield,
   Zap,
+  X,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { LogoUpload } from "@/components/settings/logo-upload";
 import { useOnboardingProgress } from "@/contexts/onboarding-context";
@@ -59,7 +60,8 @@ function AccountSettingsForm() {
         if (res.ok && json.success) {
           const s = json.user?.settings || {};
           // Normalize numeric field
-          if (s.defaultTaxRate === null || s.defaultTaxRate === undefined) s.defaultTaxRate = 0;
+          if (s.defaultTaxRate === null || s.defaultTaxRate === undefined)
+            s.defaultTaxRate = 0;
           setSettings(s);
           setInitialSettings(s);
         } else {
@@ -74,7 +76,10 @@ function AccountSettingsForm() {
     fetchSettings();
   }, []);
 
-  const handleChange = (field: keyof Settings, value: string | number | boolean | null) => {
+  const handleChange = (
+    field: keyof Settings,
+    value: string | number | boolean | null
+  ) => {
     setSettings((prev) => ({ ...(prev || {}), [field]: value }));
   };
 
@@ -92,7 +97,10 @@ function AccountSettingsForm() {
 
   const isDirty = () => {
     if (!initialSettings || !settings) return false;
-    return JSON.stringify(normalize(initialSettings)) !== JSON.stringify(normalize(settings));
+    return (
+      JSON.stringify(normalize(initialSettings)) !==
+      JSON.stringify(normalize(settings))
+    );
   };
 
   const handleSave = async () => {
@@ -138,12 +146,15 @@ function AccountSettingsForm() {
 
   const handleLogoUpdate = (logoUrl: string | null) => {
     setSettings((prev) => ({ ...(prev || {}), companyLogoUrl: logoUrl }));
-    setInitialSettings((prev) => ({ ...(prev || {}), companyLogoUrl: logoUrl }));
+    setInitialSettings((prev) => ({
+      ...(prev || {}),
+      companyLogoUrl: logoUrl,
+    }));
   };
 
   return (
     <div className="space-y-4">
-      <LogoUpload 
+      <LogoUpload
         currentLogoUrl={settings?.companyLogoUrl}
         onLogoUpdate={handleLogoUpdate}
       />
@@ -158,7 +169,10 @@ function AccountSettingsForm() {
       </div>
       <div>
         <Label>Default Currency</Label>
-        <Select value={settings?.defaultCurrency ?? "USD"} onValueChange={(val) => handleChange("defaultCurrency", val)}>
+        <Select
+          value={settings?.defaultCurrency ?? "USD"}
+          onValueChange={(val) => handleChange("defaultCurrency", val)}
+        >
           <SelectTrigger className="w-full">
             <SelectValue />
           </SelectTrigger>
@@ -176,26 +190,44 @@ function AccountSettingsForm() {
           type="number"
           step="0.01"
           value={settings?.defaultTaxRate ?? 0}
-          onChange={(e) => handleChange("defaultTaxRate", e.target.value === "" ? null : Number(e.target.value))}
+          onChange={(e) =>
+            handleChange(
+              "defaultTaxRate",
+              e.target.value === "" ? null : Number(e.target.value)
+            )
+          }
           placeholder="0.00"
         />
       </div>
       <div className="flex items-center">
         <Switch
           checked={Boolean(settings?.emailNotifications)}
-          onCheckedChange={(val) => handleChange("emailNotifications", Boolean(val))}
+          onCheckedChange={(val) =>
+            handleChange("emailNotifications", Boolean(val))
+          }
         />
         <Label className="ml-2">Email notifications for new invoices</Label>
       </div>
       <div className="pt-4 border-t flex items-center justify-end space-x-3">
-        <Button variant="outline" onClick={() => {
-          // reset to initial
-          setSettings(initialSettings);
-        }} disabled={saving}>
+        <Button
+          variant="outline"
+          onClick={() => {
+            // reset to initial
+            setSettings(initialSettings);
+          }}
+          disabled={saving}
+        >
           Cancel
         </Button>
         <Button onClick={handleSave} disabled={!isDirty() || saving}>
-          {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</> : "Update Settings"}
+          {saving ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            "Update Settings"
+          )}
         </Button>
       </div>
     </div>
@@ -217,12 +249,10 @@ export default function SettingsPage() {
       connected: false,
     });
   const [connecting, setConnecting] = useState(false);
+  const [showDisconnectModal, setShowDisconnectModal] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
 
-  useEffect(() => {
-    fetchConnectionStatus();
-  }, []);
-
-  const fetchConnectionStatus = async () => {
+  const fetchConnectionStatus = useCallback(async () => {
     try {
       const response = await fetch("/api/stripe/status");
       const data = await response.json();
@@ -240,7 +270,39 @@ export default function SettingsPage() {
     } catch (error) {
       console.error("Error fetching Stripe status:", error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchConnectionStatus();
+
+    // Refetch status when returning from OAuth callback
+    // Check for success/error query params in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const success = urlParams.get("success");
+    const error = urlParams.get("error");
+    const info = urlParams.get("info");
+
+    if (success || error || info) {
+      // Small delay to ensure database is updated
+      setTimeout(() => {
+        fetchConnectionStatus();
+      }, 500);
+
+      // Show toast notifications
+      if (success === "stripe_connected") {
+        toast.success("Stripe account connected successfully!");
+      } else if (info === "stripe_pending_verification") {
+        toast.info("Stripe account connected. Verification pending.");
+      } else if (info === "stripe_connected_pending") {
+        toast.info("Stripe account connected. Please complete onboarding.");
+      } else if (error) {
+        toast.error("Failed to connect Stripe account");
+      }
+
+      // Remove query params from URL
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [fetchConnectionStatus]);
 
   const handleConnectStripe = async () => {
     setConnecting(true);
@@ -293,28 +355,87 @@ export default function SettingsPage() {
   };
 
   const handleDisconnectStripe = async () => {
-    if (
-      confirm(
-        "Are you sure you want to disconnect from Stripe? This will disable payment processing for all your invoices."
-      )
-    ) {
-      try {
-        const response = await fetch("/api/stripe/disconnect", {
-          method: "POST",
-        });
-        const data = await response.json();
+    setDisconnecting(true);
+    try {
+      const response = await fetch("/api/stripe/disconnect", {
+        method: "POST",
+      });
+      const data = await response.json();
 
-        if (data.success) {
-          setConnectionStatus({ connected: false });
-          toast.success("Disconnected from Stripe");
-        } else {
-          toast.error("Failed to disconnect from Stripe");
-        }
-      } catch (error) {
-        console.error("Error disconnecting from Stripe:", error);
+      if (data.success) {
+        setConnectionStatus({ connected: false });
+        setShowDisconnectModal(false);
+        toast.success("Disconnected from Stripe");
+      } else {
         toast.error("Failed to disconnect from Stripe");
       }
+    } catch (error) {
+      console.error("Error disconnecting from Stripe:", error);
+      toast.error("Failed to disconnect from Stripe");
+    } finally {
+      setDisconnecting(false);
     }
+  };
+
+  // Disconnect Confirmation Modal Component
+  const DisconnectModal = () => {
+    if (!showDisconnectModal) return null;
+
+    return (
+      <>
+        {/* Overlay */}
+        <div
+          className="fixed inset-0 z-40 bg-black/50"
+          onClick={() => setShowDisconnectModal(false)}
+        />
+        {/* Modal */}
+        <Card className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-md shadow-2xl">
+          <div className="p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold">
+                  Disconnect Stripe Account
+                </h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  Are you sure you want to disconnect from Stripe? This will
+                  disable payment processing for all your invoices.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowDisconnectModal(false)}
+                className="p-1 hover:bg-gray-100 rounded-md transition-colors"
+                disabled={disconnecting}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="flex items-center justify-end gap-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setShowDisconnectModal(false)}
+                disabled={disconnecting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDisconnectStripe}
+                disabled={disconnecting}
+              >
+                {disconnecting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Disconnecting...
+                  </>
+                ) : (
+                  "Disconnect"
+                )}
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </>
+    );
   };
 
   const getStatusBadge = () => {
@@ -367,144 +488,145 @@ export default function SettingsPage() {
         subtitle="Manage your account and application settings"
       />
       <MainContent>
-      <div className="mx-10 grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="col-span-1">
+        <div className="mx-10 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="col-span-1">
+            <Card>
+              <CardHeader>
+                <h2 className="text-lg font-bold text-gray-900">
+                  Company Information
+                </h2>
+              </CardHeader>
+              <CardContent>
+                <AccountSettingsForm />
+              </CardContent>
+            </Card>
 
-
-          <Card>
-            <CardHeader>
-              <h2 className="text-lg font-bold text-gray-900">Company Information</h2>
-            </CardHeader>
-            <CardContent>
-              <AccountSettingsForm />
-            </CardContent>
-          </Card>
-
-          {/* Stripe Payment Integration */}
-          <Card className="mt-6">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <CreditCard className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <div>
-                    <CardTitle>Payment Integrations</CardTitle>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {getStatusDescription()}
-                    </p>
-                  </div>
-                </div>
-                {getStatusBadge()}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {!connectionStatus.connected ? (
-                <div className="space-y-4">
-                  <Alert>
-                    <Shield className="h-4 w-4" />
-                    <AlertDescription>
-                      Connect your Stripe account to start accepting payments
-                      from your clients. Stripe handles all payment processing
-                      securely and complies with PCI standards.
-                    </AlertDescription>
-                  </Alert>
-
-                  <div className="flex items-center space-x-4">
-                    <Button
-                      onClick={handleConnectStripe}
-                      disabled={connecting}
-                      className="bg-blue-600 hover:bg-blue-700"
-                    >
-                      {connecting ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Connecting...
-                        </>
-                      ) : (
-                        <>
-                          <CreditCard className="h-4 w-4 mr-2" />
-                          Connect to Stripe
-                        </>
-                      )}
-                    </Button>
-                    <Button variant="outline" asChild>
-                      <a
-                        href="https://stripe.com/docs"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <ExternalLink className="h-4 w-4 mr-2" />
-                        Learn More
-                      </a>
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-4 bg-green-50 rounded-lg">
-                      <div className="flex items-center space-x-2">
-                        <CheckCircle className="h-5 w-5 text-green-600" />
-                        <span className="font-medium text-green-800">
-                          Account Connected
-                        </span>
-                      </div>
-                      <p className="text-sm text-green-700 mt-1">
-                        Account ID: {connectionStatus.accountId}
-                      </p>
+            {/* Stripe Payment Integration */}
+            <Card className="mt-6">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <CreditCard className="h-6 w-6 text-blue-600" />
                     </div>
-
-                    <div className="p-4 bg-blue-50 rounded-lg">
-                      <div className="flex items-center space-x-2">
-                        <Zap className="h-5 w-5 text-blue-600" />
-                        <span className="font-medium text-blue-800">
-                          Payment Processing
-                        </span>
-                      </div>
-                      <p className="text-sm text-blue-700 mt-1">
-                        {connectionStatus.chargesEnabled
-                          ? "Enabled"
-                          : "Pending Verification"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="font-medium">Account Management</h4>
-                      <p className="text-sm text-gray-600">
-                        Manage your Stripe account settings and view payouts.
+                      <CardTitle>Payment Integrations</CardTitle>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {getStatusDescription()}
                       </p>
                     </div>
-                    <div className="flex items-center space-x-2">
+                  </div>
+                  {getStatusBadge()}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {!connectionStatus.connected ? (
+                  <div className="space-y-4">
+                    <Alert>
+                      <Shield className="h-4 w-4" />
+                      <AlertDescription>
+                        Connect your Stripe account to start accepting payments
+                        from your clients. Stripe handles all payment processing
+                        securely and complies with PCI standards.
+                      </AlertDescription>
+                    </Alert>
+
+                    <div className="flex items-center space-x-4">
+                      <Button
+                        onClick={handleConnectStripe}
+                        disabled={connecting}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        {connecting ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Connecting...
+                          </>
+                        ) : (
+                          <>
+                            <CreditCard className="h-4 w-4 mr-2" />
+                            Connect to Stripe
+                          </>
+                        )}
+                      </Button>
                       <Button variant="outline" asChild>
                         <a
-                          href="https://dashboard.stripe.com"
+                          href="https://stripe.com/docs"
                           target="_blank"
                           rel="noopener noreferrer"
                         >
                           <ExternalLink className="h-4 w-4 mr-2" />
-                          Stripe Dashboard
+                          Learn More
                         </a>
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        onClick={handleDisconnectStripe}
-                      >
-                        Disconnect
                       </Button>
                     </div>
                   </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="p-4 bg-green-50 rounded-lg">
+                        <div className="flex items-center space-x-2">
+                          <CheckCircle className="h-5 w-5 text-green-600" />
+                          <span className="font-medium text-green-800">
+                            Account Connected
+                          </span>
+                        </div>
+                        <p className="text-sm text-green-700 mt-1">
+                          Account ID: {connectionStatus.accountId}
+                        </p>
+                      </div>
+
+                      <div className="p-4 bg-blue-50 rounded-lg">
+                        <div className="flex items-center space-x-2">
+                          <Zap className="h-5 w-5 text-blue-600" />
+                          <span className="font-medium text-blue-800">
+                            Payment Processing
+                          </span>
+                        </div>
+                        <p className="text-sm text-blue-700 mt-1">
+                          {connectionStatus.chargesEnabled
+                            ? "Enabled"
+                            : "Pending Verification"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium">Account Management</h4>
+                        <p className="text-sm text-gray-600">
+                          Manage your Stripe account settings and view payouts.
+                        </p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button variant="outline" asChild>
+                          <a
+                            href="https://dashboard.stripe.com"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            Stripe Dashboard
+                          </a>
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          onClick={() => setShowDisconnectModal(true)}
+                        >
+                          Disconnect
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
-            </div>
       </MainContent>
+      <DisconnectModal />
     </DashboardLayout>
   );
 }

@@ -1,9 +1,21 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { stripe } from "@/lib/stripe";
 import { db } from "@/lib/db";
 
+/**
+ * Stripe Connect Standard OAuth - Initiation Endpoint
+ *
+ * This endpoint generates the OAuth authorization URL for connecting an existing Stripe account.
+ * Works for users with Stripe accounts in ANY country.
+ *
+ * Flow:
+ * 1. User clicks "Connect Stripe" button → calls this endpoint
+ * 2. This endpoint generates OAuth URL with user ID in state parameter
+ * 3. Returns URL for frontend to redirect user to Stripe
+ * 4. User authorizes on Stripe → redirects to /api/stripe/callback
+ * 5. Callback exchanges code for account ID and saves to database
+ */
 export async function POST() {
   try {
     const session = await getServerSession(authOptions);
@@ -20,129 +32,78 @@ export async function POST() {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Check if user already has a Stripe account
-    if (user.stripeAccountId) {
+    // Allow reconnecting if onboarding wasn't completed
+    // This handles the case where user started OAuth but didn't finish onboarding
+    if (user.stripeAccountId && user.stripeOnboardingComplete) {
       return NextResponse.json(
         {
           success: false,
           error: "Stripe account already connected",
+          message:
+            "You already have a Stripe account connected. Disconnect it first to connect a different account.",
         },
         { status: 400 }
       );
     }
+    // If account exists but onboarding incomplete, allow reconnecting
+    // The callback will update the account ID if needed
 
-    if (!stripe) {
+    // Validate Stripe Connect Client ID is configured
+    const connectClientId = process.env.STRIPE_CONNECT_CLIENT_ID;
+    if (!connectClientId) {
       return NextResponse.json(
-        { error: "Stripe not configured" },
+        {
+          success: false,
+          error: "Stripe Connect not configured",
+          message:
+            "STRIPE_CONNECT_CLIENT_ID environment variable is missing. Please configure it in your Stripe dashboard under Settings > Connect > OAuth settings.",
+        },
         { status: 500 }
       );
     }
 
-    // Create Stripe Connect Express account for US
-    const account = await stripe.accounts.create({
-      type: "express",
-      country: "US", // US since your Stripe account is now in US
-      email: user.email,
-      capabilities: {
-        card_payments: { requested: true },
-        transfers: { requested: true },
-      },
-      business_type: "individual", // US supports 'individual'
-      settings: {
-        payouts: {
-          schedule: {
-            interval: "daily",
-          },
-        },
-      },
+    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const redirectUri = `${baseUrl}/api/stripe/callback`;
+
+    // Use user ID as state parameter for security (validates callback belongs to this user)
+    // Include email in state for additional verification if needed
+    const state = Buffer.from(
+      JSON.stringify({
+        userId: session.user.id,
+        email: user.email,
+        timestamp: Date.now(),
+      })
+    ).toString("base64");
+
+    // Build Stripe OAuth authorization URL
+    // Scope: read_write allows us to create charges and manage the connected account
+    const params = new URLSearchParams({
+      client_id: connectClientId,
+      response_type: "code",
+      scope: "read_write",
+      redirect_uri: redirectUri,
+      state: state,
+      // Optional: pre-fill user email if available
+      ...(user.email && { "stripe_user[email]": user.email }),
     });
 
-    // Create account link for onboarding
-    const accountLink = await stripe.accountLinks.create({
-      account: account.id,
-      refresh_url: `${process.env.NEXTAUTH_URL}/settings?refresh=true`,
-      return_url: `${process.env.NEXTAUTH_URL}/api/stripe/callback?account_id=${account.id}`,
-      type: "account_onboarding",
-    });
-
-    // Update user with Stripe account ID
-    await db.user.update({
-      where: { id: session.user.id },
-      data: {
-        stripeAccountId: account.id,
-        stripeAccountStatus: "PENDING",
-        stripeOnboardingComplete: false,
-      },
-    });
+    const oauthUrl = `https://connect.stripe.com/oauth/authorize?${params.toString()}`;
 
     return NextResponse.json({
       success: true,
-      url: accountLink.url,
-      accountId: account.id,
+      url: oauthUrl,
     });
   } catch (error: unknown) {
-    console.error("Stripe Connect error:", error);
+    console.error("Stripe Connect OAuth initiation error:", error);
 
-    const stripeError = error as { type?: string; raw?: { message?: string }; message?: string };
-
-    // Check if it's a Connect not enabled error
-    if (
-      stripeError?.type === "StripeInvalidRequestError" &&
-      (stripeError?.raw?.message?.includes("signed up for Connect") ||
-        stripeError?.raw?.message?.includes("review the responsibilities") ||
-        stripeError?.raw?.message?.includes("platform-profile"))
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Stripe Connect platform profile required",
-          message:
-            "Please complete your Stripe Connect platform profile at https://dashboard.stripe.com/settings/connect/platform-profile",
-          action: "enable_connect",
-        },
-        { status: 400 }
-      );
-    }
-
-    // Check if it's a geographic restriction error
-    if (
-      stripeError?.type === "StripeInvalidRequestError" &&
-      stripeError?.raw?.message?.includes("cannot be created by platforms in")
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Geographic restriction",
-          message:
-            "Your Stripe account location doesn't support creating accounts in the specified country. Please contact Stripe support.",
-          action: "contact_support",
-        },
-        { status: 400 }
-      );
-    }
-
-    // Check if it's a business type error
-    if (
-      stripeError?.type === "StripeInvalidRequestError" &&
-      stripeError?.raw?.message?.includes("not a supported business type")
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Business type not supported",
-          message:
-            "The business type is not supported in your country. Please contact Stripe support for assistance.",
-          action: "contact_support",
-        },
-        { status: 400 }
-      );
-    }
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
 
     return NextResponse.json(
       {
         success: false,
-        error: "Failed to create Stripe account",
-        details: stripeError?.message || "Unknown error",
+        error: "Failed to initiate Stripe connection",
+        details: errorMessage,
       },
       { status: 500 }
     );
