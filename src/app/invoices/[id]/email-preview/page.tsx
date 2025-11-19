@@ -12,9 +12,9 @@ import { authOptions } from "@/lib/auth";
 import { createInvoiceEmail } from "@/lib/email";
 
 interface EmailPreviewProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function InvoiceEmailPreviewPage({
@@ -26,9 +26,11 @@ export default async function InvoiceEmailPreviewPage({
     redirect("/login");
   }
 
+  const { id } = await params;
+
   const invoice = await db.invoice.findFirst({
     where: {
-      id: params.id,
+      id: id,
       userId: session.user.id,
     },
     include: {
@@ -77,7 +79,7 @@ export default async function InvoiceEmailPreviewPage({
             <div className="flex flex-wrap items-center gap-2">
               <Button size="sm" variant="outline" asChild>
                 <Link
-                  href={`/invoices/${params.id}/edit`}
+                  href={`/invoices/${id}/edit`}
                   className="flex items-center gap-2"
                 >
                   <ArrowLeft className="h-4 w-4" />
@@ -92,7 +94,10 @@ export default async function InvoiceEmailPreviewPage({
               <div className="bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
                 HTML preview
               </div>
-              <div className="bg-white px-6 py-8" dangerouslySetInnerHTML={{ __html: html }} />
+              <div
+                className="bg-white px-6 py-8"
+                dangerouslySetInnerHTML={{ __html: html }}
+              />
             </div>
 
             <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -109,4 +114,3 @@ export default async function InvoiceEmailPreviewPage({
     </DashboardLayout>
   );
 }
-

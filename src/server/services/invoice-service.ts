@@ -117,35 +117,37 @@ export const invoiceService = {
       }
 
       // Update invoice status and append event in transaction
-      const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
-        const updatedInvoice = await tx.invoice.update({
-          where: { id: invoiceId },
-          data: {
-            status: InvoiceStatus.SENT,
-            sentAt: new Date(),
-          },
-          include: {
-            client: true,
-            items: true,
-            user: {
-              include: {
-                settings: true,
+      const result = await db.$transaction(
+        async (tx: Prisma.TransactionClient) => {
+          const updatedInvoice = await tx.invoice.update({
+            where: { id: invoiceId },
+            data: {
+              status: InvoiceStatus.SENT,
+              sentAt: new Date(),
+            },
+            include: {
+              client: true,
+              items: true,
+              user: {
+                include: {
+                  settings: true,
+                },
               },
             },
-          },
-        });
+          });
 
-        const event = await tx.invoiceEvent.create({
-          data: {
-            invoiceId,
-            type: "SENT",
-            actorId,
-            notes: notes || null,
-          },
-        });
+          const event = await tx.invoiceEvent.create({
+            data: {
+              invoiceId,
+              type: "SENT",
+              actorId,
+              notes: notes || null,
+            },
+          });
 
-        return { invoice: updatedInvoice, event };
-      });
+          return { invoice: updatedInvoice, event };
+        }
+      );
 
       return {
         success: true,
@@ -233,42 +235,46 @@ export const invoiceService = {
       }
 
       // Update invoice status and append event in transaction — overwrite refs/timestamps
-      const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
-        const updatedInvoice = await tx.invoice.update({
-          where: { id: invoiceId },
-          data: {
-            status: InvoiceStatus.PAID,
-            paidAt: new Date(),
-            paymentRef: paymentRef.trim(),
-            paidVia: "manual",
-          },
-          include: {
-            client: true,
-            items: true,
-            user: {
-              include: {
-                settings: true,
+      const result = await db.$transaction(
+        async (tx: Prisma.TransactionClient) => {
+          const updatedInvoice = await tx.invoice.update({
+            where: { id: invoiceId },
+            data: {
+              status: InvoiceStatus.PAID,
+              paidAt: new Date(),
+              paymentRef: paymentRef.trim(),
+              paidVia: "manual",
+            },
+            include: {
+              client: true,
+              items: true,
+              user: {
+                include: {
+                  settings: true,
+                },
               },
             },
-          },
-        });
+          });
 
-        const eventNotes = oldPaymentRef
-          ? `${notes ? notes + " - " : ""}Overwrote previous paymentRef: ${oldPaymentRef}`
-          : notes || "Manual payment";
+          const eventNotes = oldPaymentRef
+            ? `${
+                notes ? notes + " - " : ""
+              }Overwrote previous paymentRef: ${oldPaymentRef}`
+            : notes || "Manual payment";
 
-        const event = await tx.invoiceEvent.create({
-          data: {
-            invoiceId,
-            type: "PAID",
-            actorId,
-            ref: paymentRef.trim(),
-            notes: eventNotes,
-          },
-        });
+          const event = await tx.invoiceEvent.create({
+            data: {
+              invoiceId,
+              type: "PAID",
+              actorId,
+              ref: paymentRef.trim(),
+              notes: eventNotes,
+            },
+          });
 
-        return { invoice: updatedInvoice, event };
-      });
+          return { invoice: updatedInvoice, event };
+        }
+      );
 
       return {
         success: true,
@@ -332,41 +338,45 @@ export const invoiceService = {
       // Overwrite refundRef/refundedAt and record an event; include previous refundRef in notes if present.
       const oldRefundRef = invoice.refundRef;
 
-      const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
-        const updatedInvoice = await tx.invoice.update({
-          where: { id: invoiceId },
-          data: {
-            status: InvoiceStatus.REFUNDED,
-            refundedAt: new Date(),
-            refundRef: refundRef.trim(),
-          },
-          include: {
-            client: true,
-            items: true,
-            user: {
-              include: {
-                settings: true,
+      const result = await db.$transaction(
+        async (tx: Prisma.TransactionClient) => {
+          const updatedInvoice = await tx.invoice.update({
+            where: { id: invoiceId },
+            data: {
+              status: InvoiceStatus.REFUNDED,
+              refundedAt: new Date(),
+              refundRef: refundRef.trim(),
+            },
+            include: {
+              client: true,
+              items: true,
+              user: {
+                include: {
+                  settings: true,
+                },
               },
             },
-          },
-        });
+          });
 
-        const eventNotes = oldRefundRef
-          ? `${notes ? notes + " - " : ""}Overwrote previous refundRef: ${oldRefundRef}`
-          : notes || "Full refund";
+          const eventNotes = oldRefundRef
+            ? `${
+                notes ? notes + " - " : ""
+              }Overwrote previous refundRef: ${oldRefundRef}`
+            : notes || "Full refund";
 
-        const event = await tx.invoiceEvent.create({
-          data: {
-            invoiceId,
-            type: "REFUNDED",
-            actorId,
-            ref: refundRef.trim(),
-            notes: eventNotes,
-          },
-        });
+          const event = await tx.invoiceEvent.create({
+            data: {
+              invoiceId,
+              type: "REFUNDED",
+              actorId,
+              ref: refundRef.trim(),
+              notes: eventNotes,
+            },
+          });
 
-        return { invoice: updatedInvoice, event };
-      });
+          return { invoice: updatedInvoice, event };
+        }
+      );
 
       return {
         success: true,
@@ -427,34 +437,36 @@ export const invoiceService = {
       }
 
       // Soft delete and append event in transaction
-      const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
-        const updatedInvoice = await tx.invoice.update({
-          where: { id: invoiceId },
-          data: {
-            deleted: true,
-          },
-          include: {
-            client: true,
-            items: true,
-            user: {
-              include: {
-                settings: true,
+      const result = await db.$transaction(
+        async (tx: Prisma.TransactionClient) => {
+          const updatedInvoice = await tx.invoice.update({
+            where: { id: invoiceId },
+            data: {
+              deleted: true,
+            },
+            include: {
+              client: true,
+              items: true,
+              user: {
+                include: {
+                  settings: true,
+                },
               },
             },
-          },
-        });
+          });
 
-        const event = await tx.invoiceEvent.create({
-          data: {
-            invoiceId,
-            type: "SOFT_DELETE",
-            actorId,
-            notes: "Invoice soft deleted",
-          },
-        });
+          const event = await tx.invoiceEvent.create({
+            data: {
+              invoiceId,
+              type: "SOFT_DELETE",
+              actorId,
+              notes: "Invoice soft deleted",
+            },
+          });
 
-        return { invoice: updatedInvoice, event };
-      });
+          return { invoice: updatedInvoice, event };
+        }
+      );
 
       return {
         success: true,
@@ -515,34 +527,36 @@ export const invoiceService = {
       }
 
       // Restore and append event in transaction
-      const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
-        const updatedInvoice = await tx.invoice.update({
-          where: { id: invoiceId },
-          data: {
-            deleted: false,
-          },
-          include: {
-            client: true,
-            items: true,
-            user: {
-              include: {
-                settings: true,
+      const result = await db.$transaction(
+        async (tx: Prisma.TransactionClient) => {
+          const updatedInvoice = await tx.invoice.update({
+            where: { id: invoiceId },
+            data: {
+              deleted: false,
+            },
+            include: {
+              client: true,
+              items: true,
+              user: {
+                include: {
+                  settings: true,
+                },
               },
             },
-          },
-        });
+          });
 
-        const event = await tx.invoiceEvent.create({
-          data: {
-            invoiceId,
-            type: "RESTORE",
-            actorId,
-            notes: "Invoice restored",
-          },
-        });
+          const event = await tx.invoiceEvent.create({
+            data: {
+              invoiceId,
+              type: "RESTORE",
+              actorId,
+              notes: "Invoice restored",
+            },
+          });
 
-        return { invoice: updatedInvoice, event };
-      });
+          return { invoice: updatedInvoice, event };
+        }
+      );
 
       return {
         success: true,
@@ -589,6 +603,11 @@ export const invoiceService = {
           include: {
             client: true,
             items: true,
+            user: {
+              include: {
+                settings: true,
+              },
+            },
           },
         });
         return {
@@ -599,32 +618,39 @@ export const invoiceService = {
       }
 
       // Update invoice and append event in transaction
-      const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
-        const updatedInvoice = await tx.invoice.update({
-          where: { id: invoiceId },
-          data: {
-            status: InvoiceStatus.PAID,
-            paidAt: new Date(),
-            paymentRef: stripePaymentId,
-            paidVia: "stripe",
-          },
-          include: {
-            client: true,
-            items: true,
-          },
-        });
+      const result = await db.$transaction(
+        async (tx: Prisma.TransactionClient) => {
+          const updatedInvoice = await tx.invoice.update({
+            where: { id: invoiceId },
+            data: {
+              status: InvoiceStatus.PAID,
+              paidAt: new Date(),
+              paymentRef: stripePaymentId,
+              paidVia: "stripe",
+            },
+            include: {
+              client: true,
+              items: true,
+              user: {
+                include: {
+                  settings: true,
+                },
+              },
+            },
+          });
 
-        const event = await tx.invoiceEvent.create({
-          data: {
-            invoiceId,
-            type: "PAID",
-            ref: stripePaymentId,
-            notes: `Stripe payment succeeded. Amount: ${currency} ${amount}`,
-          },
-        });
+          const event = await tx.invoiceEvent.create({
+            data: {
+              invoiceId,
+              type: "PAID",
+              ref: stripePaymentId,
+              notes: `Stripe payment succeeded. Amount: ${currency} ${amount}`,
+            },
+          });
 
-        return { invoice: updatedInvoice, event };
-      });
+          return { invoice: updatedInvoice, event };
+        }
+      );
 
       return {
         success: true,
@@ -641,4 +667,3 @@ export const invoiceService = {
     }
   },
 };
-
