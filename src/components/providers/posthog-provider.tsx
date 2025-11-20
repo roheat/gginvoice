@@ -1,14 +1,28 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, type ReactNode, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { initPosthog, isPosthogConfigured, posthog } from "@/lib/posthog";
 
-export function PosthogProvider({ children }: { children: ReactNode }) {
-  const session = useSession();
+function PosthogPageView() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (!isPosthogConfigured) return;
+
+    const url = pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : "");
+    posthog.capture("$pageview", { 
+      $current_url: url,
+    });
+  }, [pathname, searchParams]);
+
+  return null;
+}
+
+export function PosthogProvider({ children }: { children: ReactNode }) {
+  const session = useSession();
 
   // Initialize once on mount
   useEffect(() => {
@@ -34,16 +48,13 @@ export function PosthogProvider({ children }: { children: ReactNode }) {
     }
   }, [session.status, session.data?.user]);
 
-  // Capture pageviews
-  useEffect(() => {
-    if (!isPosthogConfigured) return;
-
-    const url = pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : "");
-    posthog.capture("$pageview", { 
-      $current_url: url,
-    });
-  }, [pathname, searchParams]);
-
-  return <>{children}</>;
+  return (
+    <>
+      <Suspense fallback={null}>
+        <PosthogPageView />
+      </Suspense>
+      {children}
+    </>
+  );
 }
 
