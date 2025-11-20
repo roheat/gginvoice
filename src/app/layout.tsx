@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthSessionProvider } from "@/components/providers/session-provider";
+import { PosthogProvider } from "@/components/providers/posthog-provider";
 import { TRPCProvider } from "@/components/providers/trpc-provider";
 import { OnboardingProgressProvider } from "@/contexts/onboarding-context";
 import { Toaster } from "sonner";
@@ -25,12 +26,14 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.variable} font-sans antialiased`}>
         <AuthSessionProvider>
-          <TRPCProvider>
-            <OnboardingProgressProvider>
-              {children}
-              <Toaster />
-            </OnboardingProgressProvider>
-          </TRPCProvider>
+          <PosthogProvider>
+            <TRPCProvider>
+              <OnboardingProgressProvider>
+                {children}
+                <Toaster />
+              </OnboardingProgressProvider>
+            </TRPCProvider>
+          </PosthogProvider>
         </AuthSessionProvider>
       </body>
     </html>

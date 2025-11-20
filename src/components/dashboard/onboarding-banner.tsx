@@ -39,11 +39,10 @@ const onboardingSteps: Array<
   },
 ];
 
-const BANNER_STORAGE_KEY = "gginvoice_onboarding_banner_hidden";
-
-export function OnboardingBanner({ username }: { username?: string }) {
+export function OnboardingBanner({ username, userId }: { username?: string, userId?: string }) {
   const [hidden, setHidden] = useState(false);
   const { progress } = useOnboardingProgress();
+  const BANNER_STORAGE_KEY = `gginvoice_onboarding_banner_hidden_${userId}`;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -51,7 +50,7 @@ export function OnboardingBanner({ username }: { username?: string }) {
     if (isDismissed === "1") {
       setHidden(true);
     }
-  }, []);
+  }, [BANNER_STORAGE_KEY, userId]);
 
   const handleClose = () => {
     setHidden(true);

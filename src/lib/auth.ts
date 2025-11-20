@@ -1,15 +1,12 @@
-import { NextAuthOptions } from "next-auth";
+import { DefaultSession, NextAuthOptions } from "next-auth";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import GoogleProvider from "next-auth/providers/google";
 import { db } from "./db";
 
 declare module "next-auth" {
-  interface Session {
-    user: {
+  interface Session extends DefaultSession {
+    user: DefaultSession["user"] & {
       id: string;
-      name?: string | null;
-      email?: string | null;
-      image?: string | null;
     };
   }
 }

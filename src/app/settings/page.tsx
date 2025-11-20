@@ -510,9 +510,10 @@ export default function SettingsPage() {
                 <AccountSettingsForm />
               </CardContent>
             </Card>
-
+            </div>
+            <div className="col-span-1">
             {/* Stripe Payment Integration */}
-            <Card className="mt-6">
+            <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">

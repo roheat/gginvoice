@@ -618,26 +618,25 @@ export const invoiceService = {
       }
 
       // Update invoice and append event in transaction
-      const result = await db.$transaction(
-        async (tx: Prisma.TransactionClient) => {
-          const updatedInvoice = await tx.invoice.update({
-            where: { id: invoiceId },
-            data: {
-              status: InvoiceStatus.PAID,
-              paidAt: new Date(),
-              paymentRef: stripePaymentId,
-              paidVia: "stripe",
-            },
-            include: {
-              client: true,
-              items: true,
-              user: {
-                include: {
-                  settings: true,
-                },
+      const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+        const updatedInvoice = await tx.invoice.update({
+          where: { id: invoiceId },
+          data: {
+            status: InvoiceStatus.PAID,
+            paidAt: new Date(),
+            paymentRef: stripePaymentId,
+            paidVia: "stripe",
+          },
+          include: {
+            client: true,
+            items: true,
+            user: {
+              include: {
+                settings: true,
               },
             },
-          });
+          },
+        });
 
           const event = await tx.invoiceEvent.create({
             data: {

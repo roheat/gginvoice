@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -232,45 +232,6 @@ export function InvoiceActions({
     }
   };
 
-  // Modal Component
-  const Modal = ({
-    title,
-    description,
-    children,
-  }: {
-    title: string;
-    description: string;
-    children: React.ReactNode;
-  }) => {
-    return (
-      <>
-        {/* Overlay */}
-        <div
-          className="fixed inset-0 z-40 bg-black/50"
-          onClick={closeModal}
-        />
-        {/* Modal */}
-        <Card className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-md shadow-2xl">
-          <div className="p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold">{title}</h2>
-                <p className="text-sm text-gray-600 mt-1">{description}</p>
-              </div>
-              <button
-                onClick={closeModal}
-                className="p-1 hover:bg-gray-100 rounded-md transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            {children}
-          </div>
-        </Card>
-      </>
-    );
-  };
-
   if (invoice.deleted) {
     return (
       <div className="flex items-center gap-2">
@@ -362,9 +323,10 @@ export function InvoiceActions({
 
       {/* Send Modal */}
       {activeModal === "send" && (
-        <Modal
+        <InvoiceActionsModal
           title="Send Invoice"
           description="Mark this invoice as sent. This will lock financial fields."
+          onClose={closeModal}
         >
           <Alert className="bg-blue-50 border-blue-200">
             <AlertCircle className="h-4 w-4 text-blue-600" />
@@ -388,14 +350,15 @@ export function InvoiceActions({
               {isLoading ? "Sending..." : "Send Invoice"}
             </Button>
           </div>
-        </Modal>
+        </InvoiceActionsModal>
       )}
 
       {/* Mark as Paid Modal */}
       {activeModal === "pay" && (
-        <Modal
+        <InvoiceActionsModal
           title="Mark Invoice as Paid"
           description="Record a manual payment for this invoice"
+          onClose={closeModal}
         >
           <div className="space-y-4">
             <div>
@@ -445,14 +408,15 @@ export function InvoiceActions({
               </Button>
             </div>
           </div>
-        </Modal>
+        </InvoiceActionsModal>
       )}
 
       {/* Refund Modal */}
       {activeModal === "refund" && (
-        <Modal
+        <InvoiceActionsModal
           title="Refund Invoice"
           description="Issue a full refund for this paid invoice"
+          onClose={closeModal}
         >
           <div className="space-y-4">
             <div>
@@ -502,14 +466,15 @@ export function InvoiceActions({
               </Button>
             </div>
           </div>
-        </Modal>
+        </InvoiceActionsModal>
       )}
 
       {/* Delete Modal */}
       {activeModal === "delete" && (
-        <Modal
+        <InvoiceActionsModal
           title="Delete Invoice"
           description="Soft delete this invoice (can be restored later)"
+          onClose={closeModal}
         >
           <Alert className="bg-red-50 border-red-200">
             <AlertCircle className="h-4 w-4 text-red-600" />
@@ -533,8 +498,47 @@ export function InvoiceActions({
               {isLoading ? "Deleting..." : "Delete Invoice"}
             </Button>
           </div>
-        </Modal>
+        </InvoiceActionsModal>
       )}
+    </>
+  );
+}
+
+interface InvoiceActionsModalProps {
+  title: string;
+  description: string;
+  onClose: () => void;
+  children: ReactNode;
+}
+
+function InvoiceActionsModal({
+  title,
+  description,
+  onClose,
+  children,
+}: InvoiceActionsModalProps) {
+  return (
+    <>
+      {/* Overlay */}
+      <div className="fixed inset-0 z-40 bg-black/50" onClick={onClose} />
+      {/* Modal */}
+      <Card className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-md shadow-2xl">
+        <div className="p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">{title}</h2>
+              <p className="text-sm text-gray-600 mt-1">{description}</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-1 hover:bg-gray-100 rounded-md transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          {children}
+        </div>
+      </Card>
     </>
   );
 }

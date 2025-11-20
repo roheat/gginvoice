@@ -80,6 +80,18 @@ STRIPE_SECRET_KEY="sk_live_or_test_key"
 STRIPE_WEBHOOK_SECRET="whsec_your-webhook-secret"
 ```
 
+Add PostHog to capture anonymous and authenticated journeys:
+
+```
+NEXT_PUBLIC_POSTHOG_API_KEY="phc_project_api_key"
+NEXT_PUBLIC_POSTHOG_HOST="https://app.posthog.com"
+```
+
+## Analytics (PostHog)
+
+- After setting the PostHog environment variables above, the bundled `PosthogProvider` (already wrapped inside `AuthSessionProvider`) initializes PostHog on the client.
+- It automatically identifies authenticated users using their NextAuth user ID and captures `$pageview` events for navigation.
+
 ## Google OAuth Credentials
 
 1. Open the [Google Cloud Console](https://console.cloud.google.com/).
