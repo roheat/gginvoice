@@ -17,6 +17,7 @@ import {
 import { generateInvoicePDF } from "@/lib/pdf-generator";
 import { PaymentForm } from "@/components/payments/payment-form";
 import Image from "next/image";
+import { posthog } from "@/lib/posthog";
 
 interface InvoiceItem {
   id: string;
@@ -122,6 +123,11 @@ export function PublicInvoiceDisplay({ invoice }: PublicInvoiceDisplayProps) {
   };
 
   const handleDownloadPDF = async () => {
+    // Track PDF download clicked
+    posthog.capture("pdf_download_clicked", {
+      invoiceId: invoice.id,
+    });
+
     setIsGeneratingPDF(true);
     try {
       await generateInvoicePDF(invoice);

@@ -21,6 +21,7 @@ import { CalculationsPanel } from "./calculations-panel";
 import { ClientSection } from "./client-section";
 import { InvoiceItem, InvoiceItemData } from "./invoice-item";
 import { useInvoiceForm, InitialInvoice } from "@/hooks/use-invoice-form";
+import { posthog } from "@/lib/posthog";
 
  
 
@@ -363,12 +364,18 @@ export function InvoiceForm({ initialInvoice, isEditing = false, invoiceActions 
                     id="acceptCreditCards"
                     checked={formData.acceptCreditCards}
                     disabled={!stripeConnected}
-                    onCheckedChange={(checked: boolean) =>
+                    onCheckedChange={(checked: boolean) => {
+                      // Track Stripe toggle
+                      posthog.capture("invoice_stripe_toggled", {
+                        enabled: checked,
+                        invoiceId: initialInvoice?.id || null,
+                      });
+                      
                       setFormData((prev) => ({
                         ...prev,
                         acceptCreditCards: checked,
-                      }))
-                    }
+                      }));
+                    }}
                   />
                 <Label htmlFor="acceptCreditCards">
                   Accept Credit Cards (Stripe)
@@ -384,7 +391,13 @@ export function InvoiceForm({ initialInvoice, isEditing = false, invoiceActions 
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => router.push("/settings")}
+                      onClick={() => {
+                        // Track Stripe connect click from invoice form
+                        posthog.capture("stripe_connect_clicked", {
+                          source: "invoice_form",
+                        });
+                        router.push("/settings");
+                      }}
                     >
                       <CreditCard className="h-4 w-4 mr-2" />
                       Connect Stripe

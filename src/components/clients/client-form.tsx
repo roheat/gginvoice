@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { posthog } from "@/lib/posthog";
 
 interface ClientFormData {
   id?: string;
@@ -100,6 +101,17 @@ export function ClientForm({ initialData, isEditing = false, onSuccess }: Client
 
       if (!response.ok || !result.success) {
         throw new Error(result.error || "Failed to save client");
+      }
+
+      // Track client creation/update
+      if (isEditing) {
+        posthog.capture("client_updated", {
+          clientId: formData.id,
+        });
+      } else {
+        posthog.capture("client_created_from_clients_page", {
+          source: "clients_page",
+        });
       }
 
       toast.success(isEditing ? "Client updated successfully!" : "Client created successfully!");

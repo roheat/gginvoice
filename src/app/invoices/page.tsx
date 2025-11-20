@@ -16,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { posthog } from "@/lib/posthog";
 
 interface Invoice {
   id: string;
@@ -189,12 +190,16 @@ export default function InvoicesPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() =>
+                                onClick={() => {
+                                  // Track invoice view clicked
+                                  posthog.capture("invoice_view_clicked", {
+                                    invoiceId: invoice.id,
+                                  });
                                   window.open(
                                     `/invoices/public/${invoice.id}`,
                                     "_blank"
-                                  )
-                                }
+                                  );
+                                }}
                                 className="border border-gray-200 -mr-px rounded-l-md rounded-r-none bg-white text-gray-700 hover:bg-gray-50"
                               >
                                 <Eye className="h-4 w-4" />
@@ -203,9 +208,13 @@ export default function InvoicesPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() =>
-                                  router.push(`/invoices/${invoice.id}/edit`)
-                                }
+                                onClick={() => {
+                                  // Track invoice edit clicked
+                                  posthog.capture("invoice_edit_clicked", {
+                                    invoiceId: invoice.id,
+                                  });
+                                  router.push(`/invoices/${invoice.id}/edit`);
+                                }}
                                 className="border border-gray-200 rounded-r-md rounded-l-none bg-white text-gray-700 hover:bg-gray-50"
                               >
                                 <Edit className="h-4 w-4 mr-1" />

@@ -6,6 +6,7 @@ import { X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useOnboardingProgress, type OnboardingStepId } from "@/contexts/onboarding-context";
+import { posthog } from "@/lib/posthog";
 
 const onboardingSteps: Array<
   {
@@ -53,6 +54,9 @@ export function OnboardingBanner({ username, userId }: { username?: string, user
   }, [BANNER_STORAGE_KEY, userId]);
 
   const handleClose = () => {
+    // Track onboarding dismissed
+    posthog.capture("onboarding_dismissed");
+
     setHidden(true);
     if (typeof window !== "undefined") {
       window.localStorage.setItem(BANNER_STORAGE_KEY, "1");
@@ -152,7 +156,15 @@ export function OnboardingBanner({ username, userId }: { username?: string, user
                       }
                     `}
                   >
-                    <Link href={step.href}>
+                    <Link
+                      href={step.href}
+                      onClick={() => {
+                        // Track onboarding step clicked
+                        posthog.capture("onboarding_step_clicked", {
+                          step: step.id,
+                        });
+                      }}
+                    >
                       {completed ? "Review" : step.action}
                     </Link>
                   </Button>

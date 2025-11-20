@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { InvoiceItemData } from "@/components/invoices/invoice-item";
 import { calculateInvoice } from "@/lib/invoice-calculations";
 import { useOnboardingProgress } from "@/contexts/onboarding-context";
+import { posthog } from "@/lib/posthog";
 
 export interface InitialInvoice {
   clientId?: string;
@@ -223,6 +224,11 @@ export function useInvoiceForm({ initialInvoice, isEditing = false }: UseInvoice
         setClients(refreshResult.clients);
       }
 
+      // Track client creation from invoice form
+      posthog.capture("client_created_from_invoice", {
+        source: "invoice_form",
+      });
+
       toast.success("Client created successfully");
     } catch (error) {
       console.error("Client creation error:", error);
@@ -393,6 +399,11 @@ export function useInvoiceForm({ initialInvoice, isEditing = false }: UseInvoice
           throw new Error(result.error || "Failed to update invoice");
         }
 
+        // Track invoice update
+        posthog.capture("invoice_updated", {
+          invoiceId: initialInvoice.id,
+        });
+
         toast.success("Invoice updated successfully");
         router.push("/invoices");
       } else {
@@ -429,8 +440,18 @@ export function useInvoiceForm({ initialInvoice, isEditing = false }: UseInvoice
         // Refresh onboarding progress after creating first invoice
         refreshOnboarding();
 
+        // Track invoice creation
+        if (action === "draft") {
+          posthog.capture("invoice_saved_as_draft", {
+            action: "draft",
+          });
+        }
+
         // If the user chose "send", call the sendInvoice mutation to transition and email the invoice.
         if (action === "send") {
+          posthog.capture("invoice_saved_as_draft_and_sent", {
+            action: "send",
+          });
           try {
             const sendResponse = await fetch("/api/trpc/invoice.sendInvoice", {
               method: "POST",

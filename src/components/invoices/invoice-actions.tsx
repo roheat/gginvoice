@@ -16,6 +16,7 @@ import {
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
+import { posthog } from "@/lib/posthog";
 
 interface Invoice {
   id: string;
@@ -96,6 +97,11 @@ export function InvoiceActions({
         throw new Error(data.error?.message || "Failed to send invoice");
       }
 
+      // Track invoice sent
+      posthog.capture("invoice_sent", {
+        invoiceId: invoice.id,
+      });
+
       toast.success("Invoice sent successfully!");
       closeModal();
       onActionSuccess();
@@ -130,6 +136,11 @@ export function InvoiceActions({
       if (!response.ok || data.error) {
         throw new Error(data.error?.message || "Failed to mark invoice as paid");
       }
+
+      // Track invoice marked as paid
+      posthog.capture("invoice_marked_as_paid", {
+        invoiceId: invoice.id,
+      });
 
       toast.success("Invoice marked as paid!");
       closeModal();
@@ -166,6 +177,11 @@ export function InvoiceActions({
         throw new Error(data.error?.message || "Failed to refund invoice");
       }
 
+      // Track invoice refunded
+      posthog.capture("invoice_refunded", {
+        invoiceId: invoice.id,
+      });
+
       toast.success("Invoice refunded successfully!");
       closeModal();
       onActionSuccess();
@@ -194,6 +210,11 @@ export function InvoiceActions({
         throw new Error(data.error?.message || "Failed to delete invoice");
       }
 
+      // Track invoice deleted
+      posthog.capture("invoice_deleted", {
+        invoiceId: invoice.id,
+      });
+
       toast.success("Invoice deleted successfully!");
       closeModal();
       onActionSuccess();
@@ -221,6 +242,11 @@ export function InvoiceActions({
       if (!response.ok || data.error) {
         throw new Error(data.error?.message || "Failed to restore invoice");
       }
+
+      // Track invoice restored
+      posthog.capture("invoice_restored", {
+        invoiceId: invoice.id,
+      });
 
       toast.success("Invoice restored successfully!");
       onActionSuccess();

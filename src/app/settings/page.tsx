@@ -33,6 +33,7 @@ import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { LogoUpload } from "@/components/settings/logo-upload";
 import { useOnboardingProgress } from "@/contexts/onboarding-context";
+import { posthog } from "@/lib/posthog";
 
 type Settings = {
   companyName?: string | null;
@@ -229,7 +230,14 @@ function AccountSettingsForm() {
         >
           Cancel
         </Button>
-        <Button onClick={handleSave} disabled={!isDirty() || saving}>
+        <Button
+          onClick={() => {
+            // Track settings update
+            posthog.capture("settings_updated");
+            handleSave();
+          }}
+          disabled={!isDirty() || saving}
+        >
           {saving ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -315,6 +323,11 @@ export default function SettingsPage() {
   }, [fetchConnectionStatus]);
 
   const handleConnectStripe = async () => {
+    // Track Stripe connect initiated from settings
+    posthog.capture("stripe_connect_initiated", {
+      source: "settings",
+    });
+
     setConnecting(true);
     try {
       const response = await fetch("/api/stripe/connect", {
@@ -373,6 +386,11 @@ export default function SettingsPage() {
       const data = await response.json();
 
       if (data.success) {
+        // Track confirmed disconnect
+        posthog.capture("stripe_disconnect_confirmed", {
+          accountId: connectionStatus.accountId || "",
+        });
+
         setConnectionStatus({ connected: false });
         setShowDisconnectModal(false);
         toast.success("Disconnected from Stripe");
@@ -624,7 +642,13 @@ export default function SettingsPage() {
                         </Button>
                         <Button
                           variant="destructive"
-                          onClick={() => setShowDisconnectModal(true)}
+                          onClick={() => {
+                            // Track disconnect click
+                            posthog.capture("stripe_disconnect_clicked", {
+                              accountId: connectionStatus.accountId || "",
+                            });
+                            setShowDisconnectModal(true);
+                          }}
                         >
                           Disconnect
                         </Button>
