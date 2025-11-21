@@ -1,6 +1,8 @@
 "use client";
 
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Sidebar } from "./sidebar";
 
 interface DashboardLayoutProps {
@@ -8,9 +10,39 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { status } = useSession();
+  const { status, data: session } = useSession();
+  const router = useRouter();
+  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
 
-  if (status === "loading") {
+  useEffect(() => {
+    if (status === "authenticated") {
+      checkOnboarding();
+    } else if (status === "unauthenticated") {
+      setCheckingOnboarding(false);
+    }
+  }, [status]);
+
+  const checkOnboarding = async () => {
+    try {
+      const res = await fetch("/api/onboarding/status");
+      if (res.ok) {
+        const data = await res.json();
+        
+        // Redirect to onboarding if not complete
+        if (!data.isComplete) {
+          router.push("/onboarding");
+          return;
+        }
+      }
+    } catch (error) {
+      console.error("Onboarding check failed:", error);
+      // Continue to dashboard on error
+    } finally {
+      setCheckingOnboarding(false);
+    }
+  };
+
+  if (status === "loading" || checkingOnboarding) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

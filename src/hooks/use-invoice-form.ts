@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { InvoiceItemData } from "@/components/invoices/invoice-item";
 import { calculateInvoice } from "@/lib/invoice-calculations";
-import { useOnboardingProgress } from "@/contexts/onboarding-context";
 import { posthog } from "@/lib/posthog";
 
 export interface InitialInvoice {
@@ -57,7 +56,6 @@ type UseInvoiceFormArgs = {
 
 export function useInvoiceForm({ initialInvoice, isEditing = false }: UseInvoiceFormArgs) {
   const router = useRouter();
-  const { refetch: refreshOnboarding } = useOnboardingProgress();
 
   const getInitialFormData = (): InvoiceFormData => {
     if (initialInvoice) {
@@ -437,9 +435,6 @@ export function useInvoiceForm({ initialInvoice, isEditing = false }: UseInvoice
           throw new Error(result.error || "Failed to create invoice");
         }
 
-        // Refresh onboarding progress after creating first invoice
-        refreshOnboarding();
-
         // Track invoice creation
         if (action === "draft") {
           posthog.capture("invoice_saved_as_draft", {
@@ -475,7 +470,17 @@ export function useInvoiceForm({ initialInvoice, isEditing = false }: UseInvoice
         }
 
         toast.success(`Invoice ${action === "draft" ? "saved as draft" : "created and sent"} successfully`);
-        router.push("/invoices");
+        
+        // Check if coming from onboarding
+        const urlParams = new URLSearchParams(window.location.search);
+        const fromOnboarding = urlParams.get("onboarding") === "true";
+        
+        if (fromOnboarding) {
+          // Redirect back to onboarding to complete the flow
+          router.push("/onboarding?invoice_created=true");
+        } else {
+          router.push("/invoices");
+        }
       }
     } catch (error) {
       console.error("Invoice operation error:", error);

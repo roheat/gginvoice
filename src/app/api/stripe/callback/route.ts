@@ -26,11 +26,26 @@ export async function GET(request: NextRequest) {
     const errorDescription = searchParams.get("error_description");
 
     const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-    const redirectUrl = new URL(`${baseUrl}/settings`);
+    
+    // Helper function to get redirect path based on onboarding status
+    const getRedirectPath = async (userId?: string): Promise<string> => {
+      if (!userId) return "/settings";
+      try {
+        const user = await db.user.findUnique({
+          where: { id: userId },
+          select: { onboardingCompletedAt: true },
+        });
+        return !user?.onboardingCompletedAt ? "/onboarding" : "/settings";
+      } catch {
+        return "/settings";
+      }
+    };
 
     // Handle OAuth errors from Stripe (user denied access, etc.)
     if (error) {
       console.error("Stripe OAuth error:", error, errorDescription);
+      const redirectPath = await getRedirectPath();
+      const redirectUrl = new URL(`${baseUrl}${redirectPath}`);
       redirectUrl.searchParams.set("error", `stripe_oauth_denied:${error}`);
       if (errorDescription) {
         redirectUrl.searchParams.set("error_description", errorDescription);
@@ -41,18 +56,24 @@ export async function GET(request: NextRequest) {
     // Validate required parameters
     if (!code) {
       console.error("Missing authorization code in callback");
+      const redirectPath = await getRedirectPath();
+      const redirectUrl = new URL(`${baseUrl}${redirectPath}`);
       redirectUrl.searchParams.set("error", "missing_authorization_code");
       return NextResponse.redirect(redirectUrl.toString());
     }
 
     if (!state) {
       console.error("Missing state parameter in callback");
+      const redirectPath = await getRedirectPath();
+      const redirectUrl = new URL(`${baseUrl}${redirectPath}`);
       redirectUrl.searchParams.set("error", "missing_state_parameter");
       return NextResponse.redirect(redirectUrl.toString());
     }
 
     if (!stripe) {
       console.error("Stripe not configured");
+      const redirectPath = await getRedirectPath();
+      const redirectUrl = new URL(`${baseUrl}${redirectPath}`);
       redirectUrl.searchParams.set("error", "stripe_not_configured");
       return NextResponse.redirect(redirectUrl.toString());
     }
@@ -75,6 +96,8 @@ export async function GET(request: NextRequest) {
       }
     } catch (stateError) {
       console.error("Invalid state parameter:", stateError);
+      const redirectPath = await getRedirectPath();
+      const redirectUrl = new URL(`${baseUrl}${redirectPath}`);
       redirectUrl.searchParams.set("error", "invalid_state_parameter");
       return NextResponse.redirect(redirectUrl.toString());
     }
@@ -86,6 +109,8 @@ export async function GET(request: NextRequest) {
 
     if (!user) {
       console.error("User not found for state:", stateData.userId);
+      const redirectPath = await getRedirectPath();
+      const redirectUrl = new URL(`${baseUrl}${redirectPath}`);
       redirectUrl.searchParams.set("error", "user_not_found");
       return NextResponse.redirect(redirectUrl.toString());
     }
@@ -93,6 +118,8 @@ export async function GET(request: NextRequest) {
     // Verify email matches (additional security check)
     if (user.email !== stateData.email) {
       console.error("Email mismatch in state validation");
+      const redirectPath = await getRedirectPath(stateData.userId);
+      const redirectUrl = new URL(`${baseUrl}${redirectPath}`);
       redirectUrl.searchParams.set("error", "state_validation_failed");
       return NextResponse.redirect(redirectUrl.toString());
     }
@@ -100,6 +127,8 @@ export async function GET(request: NextRequest) {
     // Allow updating connection if onboarding wasn't completed
     // This allows users to restart the connection if they didn't finish onboarding
     if (user.stripeAccountId && user.stripeOnboardingComplete) {
+      const redirectPath = await getRedirectPath(user.id);
+      const redirectUrl = new URL(`${baseUrl}${redirectPath}`);
       redirectUrl.searchParams.set("error", "stripe_account_already_connected");
       return NextResponse.redirect(redirectUrl.toString());
     }
@@ -140,7 +169,7 @@ export async function GET(request: NextRequest) {
       else if (chargesEnabled) {
         // Charges enabled but payouts not yet - still can accept payments
         status = "CONNECTED";
-        onboardingComplete = false; // Not fully complete until payouts enabled
+        onboardingComplete = true; // Onboarding complete if charges enabled
       }
       // Account has submitted details but verification pending
       else if (detailsSubmitted) {
@@ -163,6 +192,20 @@ export async function GET(request: NextRequest) {
         },
       });
 
+      // Check if user has completed onboarding - redirect back to onboarding if not
+      const userWithOnboarding = await db.user.findUnique({
+        where: { id: user.id },
+        select: { onboardingCompletedAt: true },
+      });
+
+      // Redirect to onboarding if not completed, otherwise to settings
+      const redirectPath = !userWithOnboarding?.onboardingCompletedAt
+        ? "/onboarding"
+        : "/settings";
+      
+      const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+      const redirectUrl = new URL(`${baseUrl}${redirectPath}`);
+
       // Redirect with appropriate success/info message
       if (status === "CONNECTED") {
         redirectUrl.searchParams.set("success", "stripe_connected");
@@ -182,6 +225,9 @@ export async function GET(request: NextRequest) {
           : "Failed to exchange authorization code";
 
       // Handle specific Stripe API errors
+      const redirectPath = await getRedirectPath(user.id);
+      const redirectUrl = new URL(`${baseUrl}${redirectPath}`);
+      
       if (
         stripeError &&
         typeof stripeError === "object" &&
@@ -197,14 +243,15 @@ export async function GET(request: NextRequest) {
         redirectUrl.searchParams.set("error", "stripe_token_exchange_failed");
         redirectUrl.searchParams.set("error_details", errorMessage);
       }
-
+      
       return NextResponse.redirect(redirectUrl.toString());
     }
   } catch (error: unknown) {
     console.error("Stripe callback processing error:", error);
 
     const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-    const redirectUrl = new URL(`${baseUrl}/settings`);
+    const redirectPath = "/settings"; // Default to settings on major error
+    const redirectUrl = new URL(`${baseUrl}${redirectPath}`);
     redirectUrl.searchParams.set("error", "callback_processing_failed");
 
     const errorMessage =

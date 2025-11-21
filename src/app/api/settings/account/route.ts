@@ -5,10 +5,10 @@ import { authOptions } from "@/lib/auth";
 import { z } from "zod";
 
 const settingsSchema = z.object({
+  userName: z.string().optional().nullable(),
   companyName: z.string().optional().nullable(),
   companyAddress: z.string().optional().nullable(),
   companyPhone: z.string().optional().nullable(),
-  companyEmail: z.string().optional().nullable(),
   companyWebsite: z.string().optional().nullable(),
   defaultCurrency: z.string().min(1).optional(),
   defaultTaxRate: z.preprocess((v) => (v === "" ? undefined : Number(v)), z.number().nonnegative()).optional(),
@@ -53,6 +53,14 @@ export async function PUT(request: NextRequest) {
 
     const data = parsed.data;
 
+    // Update user name if provided
+    if (data.userName !== undefined) {
+      await db.user.update({
+        where: { id: session.user.id },
+        data: { name: data.userName || null },
+      });
+    }
+
     // Upsert user settings (userId is unique)
     const updatedSettings = await db.userSettings.upsert({
       where: { userId: session.user.id },
@@ -63,7 +71,6 @@ export async function PUT(request: NextRequest) {
         companyName: data.companyName || null,
         companyAddress: data.companyAddress || null,
         companyPhone: data.companyPhone || null,
-        companyEmail: data.companyEmail || null,
         companyWebsite: data.companyWebsite || null,
         emailNotifications: data.emailNotifications ?? true,
       },
@@ -73,7 +80,6 @@ export async function PUT(request: NextRequest) {
         companyName: data.companyName === undefined ? undefined : data.companyName,
         companyAddress: data.companyAddress === undefined ? undefined : data.companyAddress,
         companyPhone: data.companyPhone === undefined ? undefined : data.companyPhone,
-        companyEmail: data.companyEmail === undefined ? undefined : data.companyEmail,
         companyWebsite: data.companyWebsite === undefined ? undefined : data.companyWebsite,
         emailNotifications: data.emailNotifications === undefined ? undefined : data.emailNotifications,
       },
