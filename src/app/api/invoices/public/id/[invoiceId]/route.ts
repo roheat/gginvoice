@@ -32,7 +32,6 @@ export async function GET(
                 companyName: true,
                 companyAddress: true,
                 companyPhone: true,
-                companyEmail: true,
                 companyWebsite: true,
                 companyLogoUrl: true,
               },

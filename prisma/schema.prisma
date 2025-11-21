@@ -140,6 +140,7 @@ model User {
   stripeAccountId          String?
   stripeAccountStatus      String        @default("DISCONNECTED")
   stripeOnboardingComplete Boolean       @default(false)
+  onboardingCompletedAt    DateTime?
   accounts                 Account[]
   clients                  Client[]
   invoices                 Invoice[]

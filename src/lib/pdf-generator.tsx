@@ -237,7 +237,6 @@ interface UserSettings {
   companyName?: string | null;
   companyAddress?: string | null;
   companyPhone?: string | null;
-  companyEmail?: string | null;
   companyWebsite?: string | null;
   companyLogoUrl?: string | null;
 }
@@ -314,9 +313,7 @@ const InvoicePDF = ({ invoice }: { invoice: Invoice }) => {
   const userDetails = [
     {
       label: "Email",
-      value:
-        invoice.user.settings?.companyEmail?.trim() ||
-        invoice.user.email?.trim(),
+      value: invoice.user.email?.trim(),
     },
     {
       label: "Phone",

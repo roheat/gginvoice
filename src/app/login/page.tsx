@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
   const handleGoogleSignIn = () => {
-    signIn("google", { callbackUrl: "/invoices" });
+    signIn("google", { callbackUrl: "/onboarding" });
   };
 
   return (

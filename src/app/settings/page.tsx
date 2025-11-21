@@ -32,14 +32,13 @@ import {
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { LogoUpload } from "@/components/settings/logo-upload";
-import { useOnboardingProgress } from "@/contexts/onboarding-context";
 import { posthog } from "@/lib/posthog";
 
 type Settings = {
+  userName?: string | null;
   companyName?: string | null;
   companyAddress?: string | null;
   companyPhone?: string | null;
-  companyEmail?: string | null;
   companyWebsite?: string | null;
   companyLogoUrl?: string | null;
   defaultCurrency?: string;
@@ -52,7 +51,6 @@ function AccountSettingsForm() {
   const [initialSettings, setInitialSettings] = useState<Settings | null>(null);
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [saving, setSaving] = useState(false);
-  const { refetch: refreshOnboarding } = useOnboardingProgress();
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -64,8 +62,13 @@ function AccountSettingsForm() {
           // Normalize numeric field
           if (s.defaultTaxRate === null || s.defaultTaxRate === undefined)
             s.defaultTaxRate = 0;
-          setSettings(s);
-          setInitialSettings(s);
+          // Include user name
+          const settingsWithName = {
+            ...s,
+            userName: json.user?.name || null,
+          };
+          setSettings(settingsWithName);
+          setInitialSettings(settingsWithName);
         } else {
           console.error("Failed to fetch settings", json);
         }
@@ -86,10 +89,10 @@ function AccountSettingsForm() {
   };
 
   const normalize = (s: Settings | null) => ({
+    userName: s?.userName ?? null,
     companyName: s?.companyName ?? null,
     companyAddress: s?.companyAddress ?? null,
     companyPhone: s?.companyPhone ?? null,
-    companyEmail: s?.companyEmail ?? null,
     companyWebsite: s?.companyWebsite ?? null,
     companyLogoUrl: s?.companyLogoUrl ?? null,
     defaultCurrency: s?.defaultCurrency ?? "USD",
@@ -110,10 +113,10 @@ function AccountSettingsForm() {
     setSaving(true);
     try {
       const payload = {
+        userName: settings.userName ?? null,
         companyName: settings.companyName ?? null,
         companyAddress: settings.companyAddress ?? null,
         companyPhone: settings.companyPhone ?? null,
-        companyEmail: settings.companyEmail ?? null,
         companyWebsite: settings.companyWebsite ?? null,
         defaultCurrency: settings.defaultCurrency ?? "USD",
         defaultTaxRate: settings.defaultTaxRate ?? 0,
@@ -129,8 +132,22 @@ function AccountSettingsForm() {
         setInitialSettings(json.settings || settings);
         setSettings((prev) => ({ ...(prev || {}), ...json.settings }));
         toast.success("Settings updated");
-        // Refresh onboarding progress
-        refreshOnboarding();
+        
+        // Auto-complete onboarding if company name is set and not yet complete
+        if (payload.companyName?.trim()) {
+          try {
+            const onboardingRes = await fetch("/api/onboarding/status");
+            if (onboardingRes.ok) {
+              const onboardingData = await onboardingRes.json();
+              if (onboardingData.canComplete && !onboardingData.isComplete) {
+                await fetch("/api/onboarding/complete", { method: "POST" });
+              }
+            }
+          } catch (error) {
+            // Silent fail - onboarding will complete on next check
+            console.error("Error auto-completing onboarding:", error);
+          }
+        }
       } else {
         toast.error(json.error || "Failed to update settings");
       }
@@ -160,6 +177,15 @@ function AccountSettingsForm() {
         currentLogoUrl={settings?.companyLogoUrl}
         onLogoUpdate={handleLogoUpdate}
       />
+      <div>
+        <Label htmlFor="userName">Your Name</Label>
+        <Input
+          id="userName"
+          value={settings?.userName ?? ""}
+          onChange={(e) => handleChange("userName", e.target.value)}
+          placeholder="John Doe"
+        />
+      </div>
       <div>
         <Label htmlFor="companyName">Company Name</Label>
         <Input
