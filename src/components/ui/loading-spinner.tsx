@@ -3,7 +3,7 @@ import Image from "next/image";
 
 export function LoadingSpinner() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+    <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">
         <div className="relative w-32 h-32 mx-auto mb-4">
           <Image

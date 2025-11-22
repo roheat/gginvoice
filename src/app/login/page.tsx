@@ -7,6 +7,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, X } from "lucide-react";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 function LoginContent() {
   const [isLoading, setIsLoading] = useState(false);
@@ -67,11 +68,7 @@ function LoginContent() {
 
   // Show loading state while checking session
   if (status === "loading") {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   // Don't render login form if already authenticated (will redirect)
@@ -240,13 +237,7 @@ function LoginContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </div>
-      }
-    >
+    <Suspense fallback={<LoadingSpinner />}>
       <LoginContent />
     </Suspense>
   );

@@ -319,7 +319,7 @@ export default function SettingsPage() {
         subtitle="Manage your account and payment integrations"
       />
       <MainContent>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 px-4 sm:px-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 ">
           {/* Company Information Card */}
           <div className="lg:col-span-1">
             <div className="mb-6">

@@ -10,92 +10,82 @@ interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
-// Dashboard routes that require onboarding completion
-const DASHBOARD_ROUTES = ["/invoices", "/clients", "/settings"];
+// Track if onboarding has been verified as complete
+let onboardingVerified = false;
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { status } = useSession();
   const router = useRouter();
   const pathname = usePathname();
-  const [hasCheckedOnboarding, setHasCheckedOnboarding] = useState(false);
-  const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
-  const [shouldRender, setShouldRender] = useState(false);
-  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [canRender, setCanRender] = useState(false);
 
-  // For dashboard routes, assume we need to check onboarding immediately
-  const isDashboardRoute = DASHBOARD_ROUTES.some((route) =>
-    pathname?.startsWith(route)
-  );
-
-  // Only check onboarding once on initial mount, not on every navigation
   useEffect(() => {
+    // Skip if not authenticated
+    if (status !== "authenticated") {
+      setCanRender(false);
+      return;
+    }
+
+    // Always allow manual access to /onboarding
+    if (pathname === "/onboarding") {
+      setCanRender(true);
+      return;
+    }
+
+    // If already verified, allow render immediately
+    if (onboardingVerified) {
+      setCanRender(true);
+      return;
+    }
+
     const checkOnboarding = async () => {
-      // Always allow manual navigation to onboarding page (hybrid approach)
-      // Users can access /onboarding anytime to update settings
-      if (pathname === "/onboarding") {
-        setHasCheckedOnboarding(true);
-        setIsCheckingOnboarding(false);
-        setShouldRender(true);
-        return;
-      }
-
-      // Check if onboarding was just completed (query param)
+      // Check if onboarding was just completed
       const urlParams = new URLSearchParams(window.location.search);
-      const onboardingComplete =
-        urlParams.get("onboarding_complete") === "true";
-
-      if (onboardingComplete) {
-        // Clean up the query parameter
+      if (urlParams.get("onboarding_complete") === "true") {
         const newUrl = new URL(window.location.href);
         newUrl.searchParams.delete("onboarding_complete");
         window.history.replaceState({}, "", newUrl.toString());
-        setHasCheckedOnboarding(true);
-        setIsCheckingOnboarding(false);
-        setShouldRender(true);
+        onboardingVerified = true;
+        setCanRender(true);
         return;
       }
 
-      // For dashboard pages (invoices, clients, settings, etc.):
-      // Check if onboarding is complete, and redirect if not
+      // Check onboarding status - CRITICAL: don't render until this completes
       try {
         const res = await fetch("/api/onboarding/status");
         if (res.ok) {
           const data = await res.json();
-
-          // Redirect to onboarding if not complete
-          // This ensures first-time users complete setup before accessing dashboard
           if (!data.isComplete) {
-            // Set redirecting flag to prevent any rendering
-            setIsRedirecting(true);
-            // Use replace instead of push to avoid back button issues
+            // Redirect immediately - keep loading visible
+            // Don't set canRender - stay in loading state until redirect
             router.replace("/onboarding");
-            // Don't set shouldRender - we're redirecting
             return;
           }
+          // Onboarding is complete - safe to render
+          onboardingVerified = true;
+          setCanRender(true);
+        } else {
+          // On error, allow render to avoid blocking
+          onboardingVerified = true;
+          setCanRender(true);
         }
-        // If we get here, onboarding is complete
-        setShouldRender(true);
       } catch (error) {
         console.error("Onboarding check failed:", error);
-        // Continue to dashboard on error
-        setShouldRender(true);
-      } finally {
-        setHasCheckedOnboarding(true);
-        setIsCheckingOnboarding(false);
+        // On error, allow render to avoid blocking
+        onboardingVerified = true;
+        setCanRender(true);
       }
     };
 
-    if (status === "authenticated" && !hasCheckedOnboarding) {
-      checkOnboarding();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, hasCheckedOnboarding, pathname]);
+    checkOnboarding();
+  }, [status, pathname, router]);
 
-  // Show loading only on initial session/auth check, not during navigation
+  // Show loading during auth check
   if (status === "loading") {
     return <LoadingSpinner />;
   }
 
+  // Show access denied if not authenticated
   if (status === "unauthenticated") {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -111,19 +101,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     );
   }
 
-  // For dashboard routes, show loading immediately until onboarding check completes
-  // This prevents any flash of content before redirect
-  if (
-    isDashboardRoute &&
-    (isCheckingOnboarding || !shouldRender || isRedirecting)
-  ) {
+  // For dashboard routes: show loading until onboarding is verified complete
+  // For /onboarding: allow render immediately
+  if (!canRender) {
     return <LoadingSpinner />;
   }
 
-  // For non-dashboard routes (like onboarding), show loading only if actively checking
-  if (isCheckingOnboarding && !hasCheckedOnboarding) {
-    return <LoadingSpinner />;
-  }
-
+  // Only render sidebar and children after verification
   return <Sidebar>{children}</Sidebar>;
 }
