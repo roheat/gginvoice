@@ -159,8 +159,7 @@ export function InvoiceActions({
   };
 
   const handleRefund = async () => {
-    if (!canRefund || !refundRef.trim()) {
-      toast.error("Please enter a refund reference");
+    if (!canRefund) {
       return;
     }
 
@@ -171,7 +170,7 @@ export function InvoiceActions({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: invoice.id,
-          refundRef: refundRef.trim(),
+          refundRef: refundRef.trim() || undefined,
           notes: refundNotes || undefined,
         }),
       });
@@ -406,7 +405,7 @@ export function InvoiceActions({
           <Alert className="bg-blue-50 border-blue-200">
             <AlertCircle className="h-4 w-4 text-blue-600" />
             <AlertDescription className="text-blue-800">
-              After sending, ${invoice.client.name} will receive an email with the invoice link.
+              After sending, {invoice.client.name || "the client"} will receive an email {invoice.client.email ? `to ${invoice.client.email}` : ""} with the invoice link.
             </AlertDescription>
           </Alert>
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4">
@@ -491,7 +490,7 @@ export function InvoiceActions({
         >
           <div className="space-y-4">
             <div>
-              <Label htmlFor="refund-ref">Refund Reference *</Label>
+              <Label htmlFor="refund-ref">Refund Reference (optional)</Label>
               <Input
                 id="refund-ref"
                 placeholder="e.g., REF-12345, CM-67890"
@@ -531,7 +530,7 @@ export function InvoiceActions({
               </Button>
               <Button
                 onClick={handleRefund}
-                disabled={isLoading || !refundRef.trim()}
+                disabled={isLoading}
                 className="bg-amber-600 hover:bg-amber-700 w-full sm:w-auto"
               >
                 {isLoading ? "Processing..." : "Issue Refund"}
@@ -545,15 +544,9 @@ export function InvoiceActions({
       {activeModal === "delete" && (
         <InvoiceActionsModal
           title="Delete Invoice"
-          description="Soft delete this invoice (can be restored later)"
+          description="Delete this invoice (can be restored later)"
           onClose={closeModal}
         >
-          <Alert className="bg-red-50 border-red-200">
-            <AlertCircle className="h-4 w-4 text-red-600" />
-            <AlertDescription className="text-red-800">
-              This will soft delete the invoice. All state transitions will be blocked until it is restored.
-            </AlertDescription>
-          </Alert>
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4">
             <Button
               variant="outline"
@@ -595,7 +588,7 @@ function InvoiceActionsModal({
       {/* Overlay */}
       <div className="fixed inset-0 z-40 bg-black/50" onClick={onClose} />
       {/* Modal */}
-      <Card className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-[calc(100%-2rem)] sm:w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto">
+      <Card className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-[calc(100%-2rem)] sm:w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto p-0">
         <div className="p-4 sm:p-6 space-y-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">

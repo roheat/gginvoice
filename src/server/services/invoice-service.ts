@@ -293,18 +293,12 @@ export const invoiceService = {
   async refundInvoice(
     invoiceId: string,
     actorId: string,
-    refundRef: string,
+    refundRef?: string,
     notes?: string
   ): Promise<InvoiceTransitionResult> {
     try {
-      // Validate required fields
-      if (!refundRef || refundRef.trim() === "") {
-        return {
-          success: false,
-          error: "refundRef is required for refunds",
-          code: "MISSING_REQUIRED_FIELD",
-        };
-      }
+      // Generate default refundRef if not provided
+      const finalRefundRef = refundRef?.trim() || `REFUND-${Date.now()}`;
 
       const invoice = await db.invoice.findUnique({
         where: { id: invoiceId },
@@ -339,7 +333,7 @@ export const invoiceService = {
             data: {
               status: InvoiceStatus.REFUNDED,
               refundedAt: new Date(),
-              refundRef: refundRef.trim(),
+              refundRef: finalRefundRef,
             },
             include: {
               client: true,
@@ -363,7 +357,7 @@ export const invoiceService = {
               invoiceId,
               type: "REFUNDED",
               actorId,
-              ref: refundRef.trim(),
+              ref: finalRefundRef,
               notes: eventNotes,
             },
           });

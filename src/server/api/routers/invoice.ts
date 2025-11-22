@@ -242,7 +242,7 @@ export const invoiceRouter = router({
     .input(
       z.object({
         id: z.string(),
-        refundRef: z.string().min(1, "Refund reference is required"),
+        refundRef: z.string().optional(),
         notes: z.string().optional(),
       })
     )
@@ -262,7 +262,7 @@ export const invoiceRouter = router({
       const result = await invoiceService.refundInvoice(
         input.id,
         ctx.session.user.id,
-        input.refundRef,
+        input.refundRef || undefined,
         input.notes
       );
 
