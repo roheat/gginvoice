@@ -326,7 +326,7 @@ export default function SettingsPage() {
               <h2 className="text-xl font-bold text-gray-900 mb-2">
                 Company Information
               </h2>
-              <p className="text-gray-600">
+              <p className="text-sm text-gray-600">
                 Update your company details that appear on invoices.
               </p>
             </div>
@@ -421,7 +421,7 @@ export default function SettingsPage() {
               <h2 className="text-xl font-bold text-gray-900 mb-2">
                 Payment Integrations
               </h2>
-              <p className="text-gray-600">
+              <p className="text-sm text-gray-600">
                 Connect payment providers to accept online payments.
               </p>
             </div>
