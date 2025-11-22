@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { FileText, Minus } from "lucide-react";
 
 interface CalculationsPanelProps {
   subtotal: number;
@@ -23,6 +24,8 @@ const formatCurrency = (amount: number, currency: string) => {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(amount);
 };
 
@@ -41,87 +44,153 @@ export function CalculationsPanel({
   tax1Rate,
   tax2Rate,
 }: CalculationsPanelProps) {
+  const hasItems = items.length > 0;
+  const hasDiscount = discount > 0;
+  const hasTaxes = tax1 > 0 || tax2 > 0;
+  const itemCount = items.length;
+  const validItems = items.filter(item => item.description && item.description.trim() !== "" && Number(item.amount) > 0);
+
   return (
-    <Card className="sticky top-6">
-      <CardHeader>
-        <CardTitle>Invoice Summary</CardTitle>
+    <Card className="sticky top-6 shadow-sm border-gray-200">
+      <CardHeader className="pb-3 border-b border-gray-100">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center">
+              <FileText className="h-4 w-4 text-blue-600" />
+            </div>
+            <CardTitle className="text-base font-semibold text-gray-900">Invoice Summary</CardTitle>
+          </div>
+          {hasItems && (
+            <span className="text-xs font-medium text-gray-600 bg-gray-100 px-2.5 py-1 rounded-md">
+              {itemCount}
+            </span>
+          )}
+        </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Itemized Breakdown (1) */}
-        <div>
-          <h4 className="text-sm font-medium text-gray-900 mb-2">Items</h4>
-          <div className="space-y-2 text-sm text-gray-700 mx-2">
-            {items.length === 0 ? (
-              <div className="flex justify-between text-sm text-gray-600">
-                <span>No items</span>
-                <span>{formatCurrency(0, currency)}</span>
+      
+      <CardContent className="pt-4">
+        {/* Items Section */}
+        <div className="mb-5">
+          {!hasItems ? (
+            <div className="py-8 px-4 text-center">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 mb-3">
+                <FileText className="h-5 w-5 text-gray-400" />
               </div>
-            ) : (
-              items.map((it, idx) => {
+              <p className="text-sm font-medium text-gray-900 mb-1">No items yet</p>
+              <p className="text-xs text-gray-500">Add items to your invoice to see the breakdown</p>
+            </div>
+          ) : validItems.length === 0 ? (
+            <div className="py-6 px-4 text-center border border-dashed border-gray-200 rounded-lg bg-gray-50/50">
+              <p className="text-sm text-gray-500 mb-1">Items need description and amount</p>
+              <p className="text-xs text-gray-400">Complete item details to see calculations</p>
+            </div>
+          ) : (
+            <div className="space-y-0">
+              {items.map((it, idx) => {
                 const qty = Number(it.quantity || 1);
-                const lineTotal = Number(it.amount) * qty;
+                const amount = Number(it.amount) || 0;
+                const lineTotal = amount * qty;
+                const hasDescription = it.description && it.description.trim() !== "";
+                const isEmpty = !hasDescription || amount === 0;
+                
+                if (isEmpty) return null;
+                
                 return (
-                  <div className="flex justify-between" key={(it.description || "") + idx}>
-                    <span className="truncate">
-                      {idx + 1}. {it.description || `Item ${idx + 1}`} {qty > 1 ? `× ${qty}` : ""}
+                  <div 
+                    className="flex justify-between items-start gap-4 py-3 border-b border-gray-100 last:border-0 first:pt-0" 
+                    key={(it.description || "") + idx}
+                  >
+                    <div className="flex-1 min-w-0 pr-2">
+                      <p className="text-sm font-medium text-gray-900 leading-snug break-words">
+                        {it.description}
+                      </p>
+                      {qty > 1 && (
+                        <p className="text-xs text-gray-500 mt-1.5 font-normal">
+                          {formatCurrency(amount, currency)} <span className="text-gray-400">×</span> {qty}
+                        </p>
+                      )}
+                    </div>
+                    <span className="text-sm font-semibold text-gray-900 whitespace-nowrap flex-shrink-0">
+                      {formatCurrency(lineTotal, currency)}
                     </span>
-                    <span>{formatCurrency(lineTotal, currency)}</span>
                   </div>
                 );
-              })
-            )}
-          </div>
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Subtotal (2) */}
-        <Separator />
-        <div className="flex justify-between text-sm text-gray-700">
-          <span className="text-sm font-medium text-gray-900">Subtotal</span>
-          <span>{formatCurrency(subtotal, currency)}</span>
+        {/* Calculations Section */}
+        <div className="space-y-2.5">
+          {/* Subtotal */}
+          <div className="flex justify-between items-center py-2">
+            <span className="text-sm text-gray-600 font-normal">Subtotal</span>
+            <span className="text-sm font-semibold text-gray-900">
+              {formatCurrency(subtotal, currency)}
+            </span>
+          </div>
+
+          {/* Discount */}
+          {hasDiscount && (
+            <div className="flex justify-between items-center py-2 px-3 -mx-3 bg-green-50 rounded-md border border-green-100">
+              <span className="text-sm text-green-700 font-medium">
+                Discount
+                {discountType === "percentage" && discountValue !== undefined && discountValue > 0
+                  ? ` (${discountValue}%)`
+                  : ""}
+              </span>
+              <span className="text-sm font-semibold text-green-700">
+                <Minus className="inline h-3 w-3 mr-0.5" />
+                {formatCurrency(discount, currency)}
+              </span>
+            </div>
+          )}
+
+          {/* Taxes */}
+          {hasTaxes ? (
+            <div className="space-y-2 pt-1">
+              {tax1 > 0 && (
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-sm text-gray-600 font-normal">
+                    {tax1Name || "Tax 1"}
+                    {tax1Rate !== undefined && tax1Rate > 0 ? (
+                      <span className="text-gray-400 font-normal"> ({tax1Rate}%)</span>
+                    ) : ""}
+                  </span>
+                  <span className="text-sm font-semibold text-gray-700">
+                    {formatCurrency(tax1, currency)}
+                  </span>
+                </div>
+              )}
+              {tax2 > 0 && (
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-sm text-gray-600 font-normal">
+                    {tax2Name || "Tax 2"}
+                    {tax2Rate !== undefined && tax2Rate > 0 ? (
+                      <span className="text-gray-400 font-normal"> ({tax2Rate}%)</span>
+                    ) : ""}
+                  </span>
+                  <span className="text-sm font-semibold text-gray-700">
+                    {formatCurrency(tax2, currency)}
+                  </span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex justify-between items-center py-2">
+              <span className="text-sm text-gray-400 font-normal">No taxes</span>
+              <span className="text-sm font-semibold text-gray-400">
+                {formatCurrency(0, currency)}
+              </span>
+            </div>
+          )}
         </div>
-        <Separator />
 
-        {/* Discount (3) */}
-        {discount > 0 && (
-          <div className="flex justify-between text-sm text-green-600">
-            <span>
-              Discount
-              {discountType === "percentage" && discountValue !== undefined
-                ? ` (${discountValue}%)`
-                : ""}
-            </span>
-            <span>-{formatCurrency(discount, currency)}</span>
-          </div>
-        )}
-
-        {/* Taxes (4) */}
-        <h4 className="text-sm font-medium text-gray-900">Taxes</h4>
-        <div className="space-y-2 text-sm text-gray-700 mx-2">
-        {tax1 > 0 && (
-          <div className="flex justify-between text-sm text-gray-700">
-            <span>
-              {tax1Name || "Tax 1"}
-              {tax1Rate !== undefined ? ` (${tax1Rate}%)` : ""}
-            </span>
-            <span>{formatCurrency(tax1, currency)}</span>
-          </div>
-        )}
-        {tax2 > 0 && (
-          <div className="flex justify-between text-sm text-gray-700">
-            <span>
-              {tax2Name || "Tax 2"}
-              {tax2Rate !== undefined ? ` (${tax2Rate}%)` : ""}
-            </span>
-            <span>{formatCurrency(tax2, currency)}</span>
-          </div>
-        )}
-        </div>
-        <Separator />
-
-        {/* Total (5) */}
-        <div className="flex justify-between items-baseline">
-          <span className="text-lg font-semibold text-gray-900">Total</span>
-          <span className="text-2xl font-extrabold text-blue-600">
+        {/* Total */}
+        <Separator className="my-4 bg-gray-200" />
+        <div className="flex justify-between items-baseline pt-1">
+          <span className="text-base font-bold text-gray-900">Total</span>
+          <span className="text-2xl font-extrabold text-blue-600 tracking-tight">
             {formatCurrency(total, currency)}
           </span>
         </div>

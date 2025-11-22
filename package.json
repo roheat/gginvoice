@@ -9,7 +9,8 @@
     "lint": "next lint",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "create-test-invoices": "npx tsx scripts/create-test-invoices.ts"
   },
   "dependencies": {
     "@auth/core": "^0.34.2",
@@ -32,6 +33,7 @@
     "autoprefixer": "^10.4.21",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
+    "fuse.js": "^7.1.0",
     "lucide-react": "^0.468.0",
     "next": "15.5.4",
     "next-auth": "^4.24.11",

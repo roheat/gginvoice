@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, MoreVertical, LogOut, X } from "lucide-react";
 import { toast } from "sonner";
 import { LogoUpload } from "@/components/settings/logo-upload";
+import { SettingsSkeleton } from "@/components/ui/skeletons/settings-skeleton";
 import { posthog } from "@/lib/posthog";
 import Image from "next/image";
 
@@ -301,15 +302,7 @@ export default function SettingsPage() {
   };
 
   if (loadingSettings) {
-    return (
-      <DashboardLayout>
-        <MainContent>
-          <div className="flex items-center justify-center min-h-[400px]">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-          </div>
-        </MainContent>
-      </DashboardLayout>
-    );
+    return <SettingsSkeleton />;
   }
 
   return (

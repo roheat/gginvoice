@@ -6,6 +6,8 @@ import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { MainContent } from "@/components/dashboard/main-content";
 import { ClientForm } from "@/components/clients/client-form";
+import { FormSkeleton } from "@/components/ui/skeletons/form-skeleton";
+import { PageHeaderSkeleton } from "@/components/ui/skeletons/page-header-skeleton";
 
 type Client = {
   id: string;
@@ -45,19 +47,19 @@ export default function EditClientPage() {
 
   return (
     <DashboardLayout>
-      <PageHeader
-        title="Edit Client"
-        subtitle="Update client information"
-        action={{
-          label: "Back to clients",
-          onClick: () => (window.location.href = "/clients"),
-        }}
-      />
+      {loading ? (
+        <PageHeaderSkeleton showSubtitle={true} />
+      ) : (
+        <PageHeader
+          title="Edit Client"
+          subtitle="Update client information"
+        />
+      )}
       <MainContent>
         <div className="max-w-3xl mx-auto">
             {loading ? (
-                <div>Loading client...</div>
-                ) : client ? (
+                <FormSkeleton fields={4} showHeader={false} />
+            ) : client ? (
                 <ClientForm
                     initialData={{
                     id: client.id,

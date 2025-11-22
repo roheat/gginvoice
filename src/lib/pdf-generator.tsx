@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
   totalValue: {
     fontSize: 13,
     fontWeight: "bold",
-    color: "#0000ff",
+    color: "#2563eb", // Primary blue (blue-600)
   },
   notesSection: {
     marginBottom: 20,
@@ -214,7 +214,34 @@ const styles = StyleSheet.create({
     color: "#6b7280",
     borderTopWidth: 1,
     borderTopColor: "#e5e7eb",
-    paddingTop: 16,
+    paddingTop: 12,
+    flexDirection: "column",
+    alignItems: "center",
+  },
+  disclaimer: {
+    fontSize: 8,
+    color: "#6b7280",
+    fontStyle: "italic",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  footerLogo: {
+    width: 128,
+    height: 64,
+    objectFit: "contain",
+    alignSelf: "center",
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  poweredBy: {
+    fontSize: 8,
+    color: "#6b7280",
+    textAlign: "center",
+    marginTop: 4,
+  },
+  poweredByBold: {
+    fontWeight: "bold",
+    color: "#2563eb",
   },
 });
 
@@ -280,7 +307,99 @@ const resolveCompanyName = (user: User) => {
   );
 };
 
-const InvoicePDF = ({ invoice }: { invoice: Invoice }) => {
+// Helper function to convert image URL to base64 with proper error handling
+const imageToBase64 = async (url: string): Promise<string | null> => {
+  try {
+    // Handle relative URLs and ensure we have a full URL
+    let imageUrl = url;
+    if (!url.startsWith('http')) {
+      // If it's a relative URL, prepend the origin
+      imageUrl = url.startsWith('/') 
+        ? `${window.location.origin}${url}`
+        : `${window.location.origin}/${url}`;
+    }
+    
+    console.log(`Fetching image from: ${imageUrl}`);
+    
+    const response = await fetch(imageUrl, {
+      mode: 'cors',
+      credentials: 'omit',
+      cache: 'no-cache',
+    });
+    
+    if (!response.ok) {
+      console.error(`Failed to fetch image: ${imageUrl}`, response.status, response.statusText);
+      return null;
+    }
+    
+    const blob = await response.blob();
+    const contentType = blob.type;
+    
+    // Check if it's an SVG
+    if (contentType === 'image/svg+xml' || url.toLowerCase().endsWith('.svg')) {
+      const svgText = await response.text();
+      // For react-pdf, use base64 encoding for SVG
+      const base64Svg = `data:image/svg+xml;base64,${btoa(svgText)}`;
+      console.log(`Converted SVG to base64, length: ${base64Svg.length}`);
+      return base64Svg;
+    }
+    
+    // For other image types, use FileReader
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        console.log(`Converted image to base64, type: ${contentType}, length: ${base64String.length}`);
+        resolve(base64String);
+      };
+      reader.onerror = (error) => {
+        console.error(`Error reading image blob: ${imageUrl}`, error);
+        reject(error);
+      };
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error(`Error converting image to base64: ${url}`, error);
+    return null;
+  }
+};
+
+// Helper function to get base64 logo (for gginvoice logo)
+const getGgInvoiceLogoBase64 = async (): Promise<string | null> => {
+  try {
+    // Try to fetch the SVG and convert to base64
+    const logoUrl = `${window.location.origin}/logo-primary.svg`;
+    const response = await fetch(logoUrl, {
+      mode: 'cors',
+      credentials: 'omit',
+    });
+    
+    if (!response.ok) {
+      console.error("Failed to fetch gginvoice logo", response.status);
+      return null;
+    }
+    
+    const svgText = await response.text();
+    
+    // For react-pdf, we need to use base64 encoding for SVG
+    // First, clean the SVG and ensure it's valid
+    const cleanedSvg = svgText.trim();
+    
+    // Convert to base64
+    const base64Svg = `data:image/svg+xml;base64,${btoa(cleanedSvg)}`;
+    
+    return base64Svg;
+  } catch (error) {
+    console.error("Error loading gginvoice logo:", error);
+    return null;
+  }
+};
+
+const InvoicePDF = ({ invoice, companyLogoBase64, gginvoiceLogoBase64 }: { 
+  invoice: Invoice;
+  companyLogoBase64: string | null;
+  gginvoiceLogoBase64: string | null;
+}) => {
   console.log("Rendering PDF for invoice:", invoice);
 
   const formatCurrency = (amount: number, currency: string = "USD") => {
@@ -342,14 +461,13 @@ const InvoicePDF = ({ invoice }: { invoice: Invoice }) => {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        {/* Logo */}
-        {invoice.user.settings?.companyLogoUrl && (
-          // eslint-disable-next-line jsx-a11y/alt-text
+        {/* Company Logo */}
+        {companyLogoBase64 && companyLogoBase64.length > 0 && companyLogoBase64.startsWith('data:image') ? (
           <Image 
-            src={invoice.user.settings.companyLogoUrl} 
+            src={companyLogoBase64} 
             style={styles.logo}
           />
-        )}
+        ) : null}
 
         {/* Header */}
         <View style={styles.header}>
@@ -500,9 +618,20 @@ const InvoicePDF = ({ invoice }: { invoice: Invoice }) => {
         )}
 
         {/* Footer */}
-        <Text style={styles.footer}>
-          Powered by <Text style={{ fontWeight: "bold", color: "#2563eb" }}>gginvoice</Text>
-        </Text>
+        <View style={styles.footer}>
+          <Text style={styles.disclaimer}>
+            This invoice is electronically generated and does not require a signature.
+          </Text>
+          {gginvoiceLogoBase64 && gginvoiceLogoBase64.length > 0 && gginvoiceLogoBase64.startsWith('data:image') ? (
+            <Image
+              src={gginvoiceLogoBase64}
+              style={styles.footerLogo}
+            />
+          ) : null}
+          <Text style={styles.poweredBy}>
+            Powered by <Text style={styles.poweredByBold}>gginvoice</Text>
+          </Text>
+        </View>
       </Page>
     </Document>
   );
@@ -511,14 +640,63 @@ const InvoicePDF = ({ invoice }: { invoice: Invoice }) => {
 export async function generateInvoicePDF(invoice: Invoice) {
   try {
     console.log("Generating PDF for invoice:", invoice.number);
+    
+    // Import image conversion utility
+    const { prepareInvoiceImages } = await import("@/lib/image-to-base64");
+    
+    // Step 1: Pre-convert all images to base64
+    console.log("Preparing images...");
+    console.log("App logo URL: /logo-primary.svg");
+    console.log("Client logo URL:", invoice.user.settings?.companyLogoUrl || "none");
+    console.log("Note: Client logos are PNG/JPG only - no SVG conversion needed");
+    
+    const { appLogoBase64, clientLogoBase64 } = await prepareInvoiceImages(
+      "/logo-primary.svg", // App logo (SVG - will be converted to PNG)
+      invoice.user.settings?.companyLogoUrl || null // Client logo (PNG/JPG only)
+    );
+    
+    console.log("App logo base64 length:", appLogoBase64?.length || 0);
+    console.log("Client logo base64 length:", clientLogoBase64?.length || 0);
+    console.log("App logo base64 preview:", appLogoBase64?.substring(0, 100) || "empty");
+    console.log("Client logo base64 preview:", clientLogoBase64?.substring(0, 100) || "empty");
+    
+    // Validate base64 strings
+    const isValidBase64 = (str: string) => {
+      if (!str || str.length === 0) return false;
+      return str.startsWith('data:image/') || str.startsWith('data:image/svg');
+    };
+    
+    if (!isValidBase64(appLogoBase64)) {
+      console.error("App logo conversion failed - invalid base64 data:", appLogoBase64?.substring(0, 50));
+    } else {
+      console.log("App logo base64 is valid");
+    }
+    
+    if (invoice.user.settings?.companyLogoUrl) {
+      if (!isValidBase64(clientLogoBase64 || '')) {
+        console.error("Client logo conversion failed - invalid base64 data:", clientLogoBase64?.substring(0, 50));
+      } else {
+        console.log("Client logo base64 is valid");
+      }
+    }
+    
+    // Step 2: Import react-pdf
     const { pdf } = await import("@react-pdf/renderer");
-
-    const pdfDoc = pdf(<InvoicePDF invoice={invoice} />);
+    
+    // Step 3: Generate PDF with prepared images
+    console.log("Generating PDF document...");
+    const pdfDoc = pdf(
+      <InvoicePDF 
+        invoice={invoice} 
+        companyLogoBase64={clientLogoBase64 || null}
+        gginvoiceLogoBase64={appLogoBase64 || null}
+      />
+    );
+    
     const blob = await pdfDoc.toBlob();
-
     console.log("PDF blob created:", blob.size, "bytes");
-
-    // Create download link
+    
+    // Step 4: Trigger download
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -527,8 +705,8 @@ export async function generateInvoicePDF(invoice: Invoice) {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-
-    console.log("PDF download initiated");
+    
+    console.log("PDF download completed");
   } catch (error) {
     console.error("Error generating PDF:", error);
     throw error;

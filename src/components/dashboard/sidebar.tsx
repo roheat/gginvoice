@@ -171,16 +171,34 @@ function SidebarContent({ pathname, onSignOut, session }: SidebarContentProps) {
         <nav className="mt-5 flex-1 px-2 space-y-1">
           {navigation.map((item) => {
             const isActive = pathname === item.href;
+            if (item.disabled) {
+              return (
+                <div
+                  key={item.name}
+                  className={cn(
+                    "group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors",
+                    "text-gray-300 cursor-not-allowed"
+                  )}
+                >
+                  <item.icon className="mr-3 flex-shrink-0 h-5 w-5 text-gray-300" />
+                  {item.name}
+                  {item.badge && (
+                    <span className="ml-auto bg-gray-500 text-white text-xs px-2 py-1 rounded-full">
+                      {item.badge}
+                    </span>
+                  )}
+                </div>
+              );
+            }
             return (
               <Link
                 key={item.name}
-                href={item.disabled ? "#" : item.href}
+                href={item.href}
+                prefetch={true}
                 className={cn(
                   "group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors",
                   isActive
                     ? "bg-white/10 text-white"
-                    : item.disabled
-                    ? "text-gray-300 cursor-not-allowed"
                     : "text-white hover:bg-white/10 hover:text-white"
                 )}
               >

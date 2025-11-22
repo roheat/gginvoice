@@ -37,7 +37,6 @@ export interface InvoiceFormData {
   invoiceNumber: string;
   date: string;
   currency: string;
-  language: string;
   items: InvoiceItemData[];
   notes: string;
   discountType: "percentage" | "amount";
@@ -47,6 +46,7 @@ export interface InvoiceFormData {
   tax2Name: string;
   tax2Rate: number;
   acceptCreditCards: boolean;
+  acceptPaypal: boolean;
 }
 
 type UseInvoiceFormArgs = {
@@ -70,7 +70,6 @@ export function useInvoiceForm({ initialInvoice, isEditing = false }: UseInvoice
             ? initialInvoice.date.split("T")[0]
             : new Date().toISOString().split("T")[0],
         currency: initialInvoice.currency || "USD",
-        language: "en",
         items: initialInvoice.items
           ? initialInvoice.items.map((it: { id?: string; description?: string; amount?: number | string; quantity?: number }) => ({
               id: it.id || Date.now().toString(),
@@ -88,6 +87,7 @@ export function useInvoiceForm({ initialInvoice, isEditing = false }: UseInvoice
         tax2Name: initialInvoice.tax2Name || "",
         tax2Rate: initialInvoice.tax2Rate || 0,
         acceptCreditCards: initialInvoice.acceptPayments || false,
+        acceptPaypal: false, // PayPal coming soon
       };
     }
     return {
@@ -98,7 +98,6 @@ export function useInvoiceForm({ initialInvoice, isEditing = false }: UseInvoice
       invoiceNumber: "",
       date: new Date().toISOString().split("T")[0],
       currency: "USD",
-      language: "en",
       items: [{ id: "1", description: "", amount: 0, quantity: 1 }],
       notes: "",
       discountType: "percentage",
@@ -108,6 +107,7 @@ export function useInvoiceForm({ initialInvoice, isEditing = false }: UseInvoice
       tax2Name: "",
       tax2Rate: 0,
       acceptCreditCards: false,
+      acceptPaypal: false,
     };
   };
 
@@ -115,6 +115,12 @@ export function useInvoiceForm({ initialInvoice, isEditing = false }: UseInvoice
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showNewClientForm, setShowNewClientForm] = useState(false);
   const [stripeConnected, setStripeConnected] = useState(false);
+  const [paypalConnected, setPaypalConnected] = useState(false);
+  const [isLoadingPaymentProviders, setIsLoadingPaymentProviders] = useState(true);
+  const [validationErrors, setValidationErrors] = useState<{
+    clientId?: boolean;
+    items?: Record<string, { description?: boolean; amount?: boolean }>;
+  }>({});
   const isFinancialFieldsLocked = Boolean(isEditing && initialInvoice && initialInvoice.deleted);
   const [nextInvoiceNumber, setNextInvoiceNumber] = useState("INV-001");
   const [clients, setClients] = useState<
@@ -141,6 +147,8 @@ export function useInvoiceForm({ initialInvoice, isEditing = false }: UseInvoice
       }
     } catch (error) {
       console.error("Error fetching Stripe status:", error);
+    } finally {
+      setIsLoadingPaymentProviders(false);
     }
   };
 
@@ -171,6 +179,15 @@ export function useInvoiceForm({ initialInvoice, isEditing = false }: UseInvoice
   }, [isEditing]);
 
   const handleClientSelect = (clientId: string) => {
+    // Clear client validation error when user selects a client
+    if (validationErrors.clientId) {
+      setValidationErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.clientId;
+        return newErrors;
+      });
+    }
+
     if (clientId === "new") {
       setShowNewClientForm(true);
       setFormData((prev) => ({ ...prev, clientId: "" }));
@@ -240,7 +257,8 @@ export function useInvoiceForm({ initialInvoice, isEditing = false }: UseInvoice
     value: string | number | boolean
   ) => {
     const newItems = [...formData.items];
-    newItems[index] = { ...newItems[index], [field]: value };
+    const item = newItems[index];
+    newItems[index] = { ...item, [field]: value };
 
     // If the per-item quantity toggle was turned off, reset quantity to 1
     if (field === "showQuantity" && value === false) {
@@ -248,6 +266,31 @@ export function useInvoiceForm({ initialInvoice, isEditing = false }: UseInvoice
     }
 
     setFormData((prev) => ({ ...prev, items: newItems }));
+
+    // Clear validation errors for this item when user starts typing
+    if (validationErrors.items?.[item.id]) {
+      const newErrors = { ...validationErrors };
+      if (newErrors.items) {
+        const itemErrors = { ...newErrors.items[item.id] };
+        if (field === "description" && value && String(value).trim() !== "") {
+          delete itemErrors.description;
+        }
+        if (field === "amount" && Number(value) > 0) {
+          delete itemErrors.amount;
+        }
+        
+        if (Object.keys(itemErrors).length === 0) {
+          delete newErrors.items[item.id];
+        } else {
+          newErrors.items[item.id] = itemErrors;
+        }
+        
+        if (Object.keys(newErrors.items).length === 0) {
+          delete newErrors.items;
+        }
+      }
+      setValidationErrors(newErrors);
+    }
   };
 
   // Compute a lightweight "dirty" flag comparing current form to initialInvoice
@@ -352,14 +395,50 @@ export function useInvoiceForm({ initialInvoice, isEditing = false }: UseInvoice
   const calculateTotal = () => getCalculation().total;
 
   const handleSubmit = async (action: "draft" | "send") => {
+    // Clear previous errors
+    setValidationErrors({});
+
+    // Validate client
     if (!formData.clientId) {
+      setValidationErrors({ clientId: true });
       toast.error("Please select or create a client");
+      // Scroll to client section
+      document.getElementById("client-section")?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
 
-    if (!isFinancialFieldsLocked && formData.items.some((item) => !item.description || item.amount <= 0)) {
-      toast.error("Please fill in all item details");
-      return;
+    // Validate items
+    if (!isFinancialFieldsLocked) {
+      const itemErrors: Record<string, { description?: boolean; amount?: boolean }> = {};
+      let hasItemErrors = false;
+
+      formData.items.forEach((item) => {
+        const itemError: { description?: boolean; amount?: boolean } = {};
+        if (!item.description || item.description.trim() === "") {
+          itemError.description = true;
+          hasItemErrors = true;
+        }
+        if (!item.amount || item.amount <= 0) {
+          itemError.amount = true;
+          hasItemErrors = true;
+        }
+        if (Object.keys(itemError).length > 0) {
+          itemErrors[item.id] = itemError;
+        }
+      });
+
+      if (hasItemErrors) {
+        setValidationErrors({ items: itemErrors });
+        toast.error("Please fill in all item details");
+        // Scroll to first invalid item
+        const firstInvalidItem = formData.items.find((item) => 
+          !item.description || item.description.trim() === "" || !item.amount || item.amount <= 0
+        );
+        if (firstInvalidItem) {
+          document.getElementById(`item-${firstInvalidItem.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -496,6 +575,9 @@ export function useInvoiceForm({ initialInvoice, isEditing = false }: UseInvoice
     isSubmitting,
     showNewClientForm,
     stripeConnected,
+    paypalConnected,
+    isLoadingPaymentProviders,
+    validationErrors,
     isFinancialFieldsLocked,
     nextInvoiceNumber,
     clients,

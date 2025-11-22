@@ -29,10 +29,10 @@ export function LogoUpload({ currentLogoUrl, onLogoUpdate }: LogoUploadProps) {
       return;
     }
 
-    // Validate file type
-    const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/svg+xml", "image/webp"];
+    // Validate file type - only PNG and JPG allowed
+    const allowedTypes = ["image/png", "image/jpeg", "image/jpg"];
     if (!allowedTypes.includes(file.type)) {
-      toast.error("File must be PNG, JPEG, SVG, or WebP");
+      toast.error("File must be PNG or JPG");
       return;
     }
 
@@ -154,7 +154,7 @@ export function LogoUpload({ currentLogoUrl, onLogoUpdate }: LogoUploadProps) {
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
+            accept="image/png,image/jpeg,image/jpg"
             onChange={handleFileSelect}
             className="hidden"
           />
@@ -204,7 +204,7 @@ export function LogoUpload({ currentLogoUrl, onLogoUpdate }: LogoUploadProps) {
           </div>
 
           <p className="text-xs text-gray-500">
-            PNG, JPEG, SVG or WebP. Max 1MB. Recommended: 240x120px
+            PNG or JPG only. Max 1MB. Recommended: 240x120px
           </p>
         </div>
       </div>

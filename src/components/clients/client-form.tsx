@@ -1,6 +1,6 @@
  "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,13 @@ interface ClientFormData {
   email: string;
   address: string;
   phone: string;
+}
+
+interface ValidationErrors {
+  name?: string;
+  email?: string;
+  address?: string;
+  phone?: string;
 }
 
 type ClientFormProps = {
@@ -34,41 +41,142 @@ export function ClientForm({ initialData, isEditing = false, onSuccess }: Client
     address: initialData?.address || "",
     phone: initialData?.phone || "",
   });
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [touchedFields, setTouchedFields] = useState<Set<keyof Omit<ClientFormData, "id">>>(new Set());
+
+  // Store initial form data for dirty check
+  const initialFormData = useMemo<ClientFormData>(() => {
+    return {
+      id: initialData?.id,
+      name: initialData?.name || "",
+      email: initialData?.email || "",
+      address: initialData?.address || "",
+      phone: initialData?.phone || "",
+    };
+  }, [initialData]);
 
   useEffect(() => {
     if (initialData) {
-      setFormData({
+      const newFormData = {
         id: initialData.id,
         name: initialData.name || "",
         email: initialData.email || "",
         address: initialData.address || "",
         phone: initialData.phone || "",
-      });
+      };
+      setFormData(newFormData);
+      // Reset touched fields when initial data changes
+      setTouchedFields(new Set());
+      setValidationErrors({});
     }
   }, [initialData]);
 
-  const handleInputChange = (field: keyof ClientFormData, value: string) => {
+  // Check if form is dirty (has been modified from initial values)
+  const isDirty = useMemo(() => {
+    if (!isEditing) {
+      // For new clients, form is dirty if any field has a value
+      return formData.name.trim() !== "" || 
+             formData.email.trim() !== "" || 
+             formData.address.trim() !== "" || 
+             formData.phone.trim() !== "";
+    }
+    // For editing, compare with initial values
+    return formData.name !== initialFormData.name ||
+           formData.email !== initialFormData.email ||
+           formData.address !== initialFormData.address ||
+           formData.phone !== initialFormData.phone;
+  }, [formData, initialFormData, isEditing]);
+
+  // Validate a single field
+  const validateField = (field: keyof Omit<ClientFormData, "id">, value: string): string | undefined => {
+    switch (field) {
+      case "name":
+        if (!value.trim()) {
+          return "Client name is required";
+        }
+        break;
+      case "email":
+        if (!value.trim()) {
+          return "Client email is required";
+        }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(value.trim())) {
+          return "Please enter a valid email address";
+        }
+        break;
+      default:
+        break;
+    }
+    return undefined;
+  };
+
+  // Validate all fields
+  const validateForm = (): boolean => {
+    const errors: ValidationErrors = {};
+    
+    const nameError = validateField("name", formData.name);
+    if (nameError) errors.name = nameError;
+
+    const emailError = validateField("email", formData.email);
+    if (emailError) errors.email = emailError;
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleInputChange = (field: keyof Omit<ClientFormData, "id">, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    
+    // Mark field as touched
+    setTouchedFields((prev) => new Set(prev).add(field));
+    
+    // Clear validation error for this field when user starts typing
+    if (validationErrors[field]) {
+      setValidationErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+    
+    // Validate field in real-time if it's been touched
+    if (touchedFields.has(field)) {
+      const error = validateField(field, value);
+      if (error) {
+        setValidationErrors((prev) => ({ ...prev, [field]: error }));
+      }
+    }
+  };
+
+  const handleBlur = (field: keyof Omit<ClientFormData, "id">) => {
+    setTouchedFields((prev) => new Set(prev).add(field));
+    const error = validateField(field, formData[field]);
+    if (error) {
+      setValidationErrors((prev) => ({ ...prev, [field]: error }));
+    } else {
+      setValidationErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validation
-    if (!formData.name.trim()) {
-      toast.error("Client name is required");
+    // Mark all fields as touched
+    setTouchedFields(new Set(["name", "email", "address", "phone"]));
+
+    // Validate form
+    if (!validateForm()) {
+      toast.error("Please fix the errors in the form");
       return;
     }
 
-    if (!formData.email.trim()) {
-      toast.error("Client email is required");
-      return;
-    }
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      toast.error("Please enter a valid email address");
+    // Check if form is dirty (only for editing)
+    if (isEditing && !isDirty) {
+      toast.info("No changes to save");
       return;
     }
 
@@ -100,6 +208,16 @@ export function ClientForm({ initialData, isEditing = false, onSuccess }: Client
       const result = await response.json();
 
       if (!response.ok || !result.success) {
+        // Handle duplicate email error
+        if (response.status === 409 && result.error?.includes("email")) {
+          setValidationErrors((prev) => ({
+            ...prev,
+            email: "A client with this email already exists",
+          }));
+          setTouchedFields((prev) => new Set(prev).add("email"));
+          toast.error("A client with this email already exists");
+          return;
+        }
         throw new Error(result.error || "Failed to save client");
       }
 
@@ -144,9 +262,17 @@ export function ClientForm({ initialData, isEditing = false, onSuccess }: Client
               type="text"
               value={formData.name}
               onChange={(e) => handleInputChange("name", e.target.value)}
+              onBlur={() => handleBlur("name")}
               placeholder="Enter client name"
-              required
+              className={validationErrors.name ? "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20" : ""}
+              aria-invalid={!!validationErrors.name}
+              aria-describedby={validationErrors.name ? "name-error" : undefined}
             />
+            {validationErrors.name && touchedFields.has("name") && (
+              <p id="name-error" className="mt-1 text-sm text-red-600">
+                {validationErrors.name}
+              </p>
+            )}
           </div>
 
           {/* Client Email */}
@@ -157,9 +283,17 @@ export function ClientForm({ initialData, isEditing = false, onSuccess }: Client
               type="email"
               value={formData.email}
               onChange={(e) => handleInputChange("email", e.target.value)}
+              onBlur={() => handleBlur("email")}
               placeholder="Enter client email"
-              required
+              className={validationErrors.email ? "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20" : ""}
+              aria-invalid={!!validationErrors.email}
+              aria-describedby={validationErrors.email ? "email-error" : undefined}
             />
+            {validationErrors.email && touchedFields.has("email") && (
+              <p id="email-error" className="mt-1 text-sm text-red-600">
+                {validationErrors.email}
+              </p>
+            )}
           </div>
 
           {/* Client Phone */}
@@ -170,8 +304,17 @@ export function ClientForm({ initialData, isEditing = false, onSuccess }: Client
               type="tel"
               value={formData.phone}
               onChange={(e) => handleInputChange("phone", e.target.value)}
+              onBlur={() => handleBlur("phone")}
               placeholder="Enter phone number"
+              className={validationErrors.phone ? "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20" : ""}
+              aria-invalid={!!validationErrors.phone}
+              aria-describedby={validationErrors.phone ? "phone-error" : undefined}
             />
+            {validationErrors.phone && touchedFields.has("phone") && (
+              <p id="phone-error" className="mt-1 text-sm text-red-600">
+                {validationErrors.phone}
+              </p>
+            )}
           </div>
 
           {/* Client Address */}
@@ -181,9 +324,18 @@ export function ClientForm({ initialData, isEditing = false, onSuccess }: Client
               id="address"
               value={formData.address}
               onChange={(e) => handleInputChange("address", e.target.value)}
+              onBlur={() => handleBlur("address")}
               placeholder="Enter client address"
               rows={3}
+              className={validationErrors.address ? "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20" : ""}
+              aria-invalid={!!validationErrors.address}
+              aria-describedby={validationErrors.address ? "address-error" : undefined}
             />
+            {validationErrors.address && touchedFields.has("address") && (
+              <p id="address-error" className="mt-1 text-sm text-red-600">
+                {validationErrors.address}
+              </p>
+            )}
           </div>
 
           {/* Form Actions */}
@@ -196,7 +348,10 @@ export function ClientForm({ initialData, isEditing = false, onSuccess }: Client
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button 
+              type="submit" 
+              disabled={isSubmitting || (isEditing && !isDirty) || Object.keys(validationErrors).length > 0}
+            >
               {isSubmitting ? (isEditing ? "Saving..." : "Creating...") : isEditing ? "Save Changes" : "Create Client"}
             </Button>
           </div>

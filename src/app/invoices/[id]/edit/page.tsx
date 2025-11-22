@@ -5,7 +5,8 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { MainContent } from "@/components/dashboard/main-content";
 import { InvoiceForm } from "@/components/invoices/invoice-form";
 import { InvoiceActions } from "@/components/invoices/invoice-actions";
-import { Loader } from "lucide-react";
+import { InvoiceFormSkeleton } from "@/components/ui/skeletons/invoice-form-skeleton";
+import { PageHeaderSkeleton } from "@/components/ui/skeletons/page-header-skeleton";
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import type { InitialInvoice } from "@/hooks/use-invoice-form";
@@ -99,21 +100,9 @@ export default function EditInvoicePage() {
   if (loading) {
     return (
       <DashboardLayout>
-        <PageHeader
-          title={
-            <div className="flex items-center gap-4">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  Loading...
-                </h1>
-              </div>
-            </div>
-          }
-        />
+        <PageHeaderSkeleton showStatus={true} />
         <MainContent>
-          <div className="max-w-7xl mx-auto flex items-center justify-center py-12">
-            <Loader className="h-8 w-8 animate-spin text-blue-600" />
-          </div>
+          <InvoiceFormSkeleton />
         </MainContent>
       </DashboardLayout>
     );
@@ -122,15 +111,11 @@ export default function EditInvoicePage() {
   if (error || !invoice) {
     return (
       <DashboardLayout>
-        <PageHeader
-          title={
-            <div className="flex items-center gap-4">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Error</h1>
-              </div>
-            </div>
-          }
-        />
+      <PageHeader
+        title={
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Error</h1>
+        }
+      />
         <MainContent>
           <div className="max-w-7xl mx-auto py-12">
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">
@@ -161,17 +146,15 @@ export default function EditInvoicePage() {
     <DashboardLayout>
       <PageHeader
         title={
-          <div className="flex items-center gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                Invoice {invoice.number}
-              </h1>
-              <div className="flex items-center gap-2 mt-2">
-                <span className="text-sm text-gray-600">Status:</span>
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${getStatusColor(invoice.status)}`}>
-                  {invoice.status}
-                </span>
-              </div>
+          <div className="flex flex-col gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+              Invoice {invoice.number}
+            </h1>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">Status:</span>
+              <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${getStatusColor(invoice.status)}`}>
+                {invoice.status}
+              </span>
             </div>
           </div>
         }

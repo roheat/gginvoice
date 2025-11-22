@@ -12,6 +12,8 @@ import {
   Trash2,
   AlertCircle,
   X,
+  Eye,
+  Link as LinkIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -258,9 +260,33 @@ export function InvoiceActions({
     }
   };
 
+  const handleViewInvoice = () => {
+    const publicUrl = `/invoices/public/${invoice.id}`;
+    window.open(publicUrl, "_blank");
+    posthog.capture("invoice_viewed_from_edit", {
+      invoiceId: invoice.id,
+    });
+  };
+
+  const handleCopyLink = async () => {
+    const baseUrl = window.location.origin;
+    const publicUrl = `${baseUrl}/invoices/public/${invoice.id}`;
+    
+    try {
+      await navigator.clipboard.writeText(publicUrl);
+      toast.success("Invoice link copied to clipboard!");
+      posthog.capture("invoice_link_copied", {
+        invoiceId: invoice.id,
+      });
+    } catch (error) {
+      console.error("Failed to copy link:", error);
+      toast.error("Failed to copy link");
+    }
+  };
+
   if (invoice.deleted) {
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
         <Alert className="bg-red-50 border-red-200 flex-1">
           <AlertCircle className="h-4 w-4 text-red-600" />
           <AlertDescription className="text-red-800">
@@ -283,6 +309,26 @@ export function InvoiceActions({
   return (
     <>
       <div className="flex flex-col gap-2">
+        {/* View Invoice and Copy Link - Always available when editing */}
+        <div className="flex flex-col gap-2 pb-2 border-b">
+          <Button
+            onClick={handleViewInvoice}
+            variant="outline"
+            className="w-full border-gray-200 text-gray-700 hover:bg-gray-50"
+          >
+            <Eye className="h-4 w-4 mr-2" />
+            View Invoice
+          </Button>
+          <Button
+            onClick={handleCopyLink}
+            variant="outline"
+            className="w-full border-gray-200 text-gray-700 hover:bg-gray-50"
+          >
+            <LinkIcon className="h-4 w-4 mr-2" />
+            Copy Link
+          </Button>
+        </div>
+
         {/* Save Draft Button */}
         {showDraftButton && onSaveDraft && (
           <Button
@@ -360,18 +406,19 @@ export function InvoiceActions({
               After sending, you can only edit notes and due date. Financial fields will be locked.
             </AlertDescription>
           </Alert>
-          <div className="flex gap-3 pt-4">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4">
             <Button
               variant="outline"
               onClick={closeModal}
               disabled={isLoading}
+              className="w-full sm:w-auto"
             >
               Cancel
             </Button>
             <Button
               onClick={handleSend}
               disabled={isLoading}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
             >
               {isLoading ? "Sending..." : "Send Invoice"}
             </Button>
@@ -417,18 +464,19 @@ export function InvoiceActions({
                 Amount: {invoice.currency} {Number(invoice.total).toFixed(2)}
               </AlertDescription>
             </Alert>
-            <div className="flex gap-3 pt-4">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4">
               <Button
                 variant="outline"
                 onClick={closeModal}
                 disabled={isLoading}
+                className="w-full sm:w-auto"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleMarkPaid}
                 disabled={isLoading || !paymentRef.trim()}
-                className="bg-green-600 hover:bg-green-700"
+                className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
               >
                 {isLoading ? "Marking..." : "Mark as Paid"}
               </Button>
@@ -475,18 +523,19 @@ export function InvoiceActions({
                 Refund Amount: {invoice.currency} {Number(invoice.total).toFixed(2)}
               </AlertDescription>
             </Alert>
-            <div className="flex gap-3 pt-4">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4">
               <Button
                 variant="outline"
                 onClick={closeModal}
                 disabled={isLoading}
+                className="w-full sm:w-auto"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleRefund}
                 disabled={isLoading || !refundRef.trim()}
-                className="bg-amber-600 hover:bg-amber-700"
+                className="bg-amber-600 hover:bg-amber-700 w-full sm:w-auto"
               >
                 {isLoading ? "Processing..." : "Issue Refund"}
               </Button>
@@ -508,18 +557,19 @@ export function InvoiceActions({
               This will soft delete the invoice. All state transitions will be blocked until it is restored.
             </AlertDescription>
           </Alert>
-          <div className="flex gap-3 pt-4">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4">
             <Button
               variant="outline"
               onClick={closeModal}
               disabled={isLoading}
+              className="w-full sm:w-auto"
             >
               Cancel
             </Button>
             <Button
               onClick={handleDelete}
               disabled={isLoading}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-red-600 hover:bg-red-700 w-full sm:w-auto"
             >
               {isLoading ? "Deleting..." : "Delete Invoice"}
             </Button>
@@ -548,16 +598,16 @@ function InvoiceActionsModal({
       {/* Overlay */}
       <div className="fixed inset-0 z-40 bg-black/50" onClick={onClose} />
       {/* Modal */}
-      <Card className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-md shadow-2xl">
-        <div className="p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold">{title}</h2>
-              <p className="text-sm text-gray-600 mt-1">{description}</p>
+      <Card className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-[calc(100%-2rem)] sm:w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div className="p-4 sm:p-6 space-y-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <h2 className="text-base sm:text-lg font-semibold break-words">{title}</h2>
+              <p className="text-xs sm:text-sm text-gray-600 mt-1">{description}</p>
             </div>
             <button
               onClick={onClose}
-              className="p-1 hover:bg-gray-100 rounded-md transition-colors"
+              className="p-1 hover:bg-gray-100 rounded-md transition-colors flex-shrink-0"
             >
               <X className="h-5 w-5" />
             </button>

@@ -3,7 +3,6 @@ import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { calculateInvoice } from "@/lib/invoice-calculations";
-import { Prisma, InvoiceStatus } from "@prisma/client";
 
 export async function POST(request: NextRequest) {
   try {
@@ -125,27 +124,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Parse status query parameter
-    const status = request.nextUrl.searchParams.get("status") ?? "ALL";
-
-    // Build where clause based on status filter
-    const where: Prisma.InvoiceWhereInput = { userId: session.user.id };
-
-    if (status === "DELETED") {
-      // Show only deleted invoices
-      where.deleted = true;
-    } else {
-      // Show only non-deleted invoices
-      where.deleted = false;
-      // If status is specified and not "ALL", filter by status
-      if (status !== "ALL") {
-        where.status = status.toUpperCase() as InvoiceStatus;
-      }
-    }
-
-    // Get filtered invoices for the user
+    // Get all invoices for the user
     const invoices = await db.invoice.findMany({
-      where,
+      where: {
+        userId: session.user.id,
+      },
       include: {
         client: true,
         items: true,

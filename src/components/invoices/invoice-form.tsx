@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,13 +12,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 // per-item quantity toggle handled in each InvoiceItem
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Plus, CreditCard, AlertCircle } from "lucide-react";
+import { Plus, AlertCircle } from "lucide-react";
 import { CalculationsPanel } from "./calculations-panel";
 import { ClientSection } from "./client-section";
 import { InvoiceItem, InvoiceItemData } from "./invoice-item";
+import { PaymentMethodsSelector } from "./payment-methods-selector";
 import { useInvoiceForm, InitialInvoice } from "@/hooks/use-invoice-form";
 import { posthog } from "@/lib/posthog";
 
@@ -28,18 +27,16 @@ import { posthog } from "@/lib/posthog";
 // InvoiceItemData imported from invoice-item.tsx
 
 const CURRENCIES = [
-  { value: "USD", label: "USD - US Dollar" },
-  { value: "EUR", label: "EUR - Euro" },
-  { value: "GBP", label: "GBP - British Pound" },
-  { value: "INR", label: "INR - Indian Rupee" },
+  { value: "USD", label: "USD - US Dollar", symbol: "$" },
+  { value: "EUR", label: "EUR - Euro", symbol: "€" },
+  { value: "GBP", label: "GBP - British Pound", symbol: "£" },
+  { value: "INR", label: "INR - Indian Rupee", symbol: "₹" },
 ];
 
-const LANGUAGES = [
-  { value: "en", label: "English" },
-  { value: "es", label: "Spanish" },
-  { value: "fr", label: "French" },
-  { value: "de", label: "German" },
-];
+const getCurrencySymbol = (currencyCode: string): string => {
+  const currency = CURRENCIES.find(c => c.value === currencyCode);
+  return currency?.symbol || "$";
+};
 
 interface InvoiceActionsSlotProps {
   onSaveDraft: () => void;
@@ -60,6 +57,9 @@ export function InvoiceForm({ initialInvoice, isEditing = false, invoiceActions 
     isSubmitting,
     showNewClientForm,
     stripeConnected,
+    paypalConnected,
+    isLoadingPaymentProviders,
+    validationErrors,
     isFinancialFieldsLocked,
     clients,
     addItem,
@@ -75,50 +75,60 @@ export function InvoiceForm({ initialInvoice, isEditing = false, invoiceActions 
     handleClientSelect,
     handleNewClientSubmit,
   } = useInvoiceForm({ initialInvoice, isEditing });
-  const router = useRouter();
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex gap-8">
+    <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 flex flex-col lg:flex-row gap-6 lg:gap-8">
       {/* Main Form */}
-      <div className="flex-1 space-y-6 pb-8">
+      <div className="flex-1 space-y-4 sm:space-y-6 pb-8">
         {/* Client Section */}
-        <ClientSection
-          clients={clients || []}
-          selectedClientId={formData.clientId}
-          onClientSelect={handleClientSelect}
-          showNewClientForm={showNewClientForm}
-          newClientData={{
-            name: formData.clientName,
-            email: formData.clientEmail,
-            address: formData.clientAddress,
-          }}
-          onNewClientChange={(field: string, value: string) =>
-            setFormData((prev) => ({ ...prev, [field]: value }))
-          }
-          onNewClientSubmit={handleNewClientSubmit}
-        />
+        <div id="client-section">
+          <ClientSection
+            clients={clients || []}
+            selectedClientId={formData.clientId}
+            onClientSelect={(clientId) => {
+              handleClientSelect(clientId);
+            }}
+            showNewClientForm={showNewClientForm}
+            newClientData={{
+              name: formData.clientName,
+              email: formData.clientEmail,
+              address: formData.clientAddress,
+            }}
+            onNewClientChange={(field: string, value: string) =>
+              setFormData((prev) => ({ ...prev, [field]: value }))
+            }
+            onNewClientSubmit={handleNewClientSubmit}
+            hasError={validationErrors.clientId}
+          />
+        </div>
 
         {/* Items Section */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Invoice Items</CardTitle>
-              <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex flex-col">
+                <CardTitle>Invoice Items</CardTitle>
+                <p className="text-xs text-gray-600 mt-2">
+                  Add the items or services you want to bill for. Adjust quantity, price, and description.
+                </p>
+              </div>
+              <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-3">
                 {isFinancialFieldsLocked && (
                   <div className="px-2 py-1 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800 font-medium">
                     🔒 Locked (Invoice Sent)
                   </div>
                 )}
+                <Button
+                  type="button"
+                  variant="default"
+                  onClick={addItem}
+                  disabled={isFinancialFieldsLocked}
+                  className="w-auto sm:w-auto"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Item
+                </Button>
               </div>
-              <Button
-                type="button"
-                variant="default"
-                onClick={addItem}
-                disabled={isFinancialFieldsLocked}
-              >
-                <Plus className="h-4 w-4" />
-                Add Item
-              </Button>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -144,18 +154,24 @@ export function InvoiceForm({ initialInvoice, isEditing = false, invoiceActions 
                 canRemove={formData.items.length > 1}
                 disabled={isFinancialFieldsLocked}
                 showQuantity={item.showQuantity ?? false}
+                errors={validationErrors.items?.[item.id]}
               />
             ))}
           </CardContent>
         </Card>
-
-        {/* Invoice Details */}
+        {/* Options Section */}
         <Card>
           <CardHeader>
-            <CardTitle>Invoice Details</CardTitle>
+            <div className="flex flex-col">
+              <CardTitle>Options</CardTitle>
+              <p className="text-xs text-gray-600 mt-2">
+                Set due date, choose currency, add notes, discounts, or taxes for this invoice.
+              </p>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <CardContent className="space-y-6">
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="col-span-1">
                 <Label htmlFor="dueDate">Due Date</Label>
                 <Input
@@ -188,36 +204,7 @@ export function InvoiceForm({ initialInvoice, isEditing = false, invoiceActions 
                   </SelectContent>
                 </Select>
               </div>
-              <div className="col-span-1">
-                <Label htmlFor="language">Language</Label>
-                <Select
-                  value={formData.language}
-                  onValueChange={(value) =>
-                    setFormData((prev) => ({ ...prev, language: value }))
-                  }
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {LANGUAGES.map((language) => (
-                      <SelectItem key={language.value} value={language.value}>
-                        {language.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Options Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Options</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
             {/* Notes */}
             <div>
               <Label htmlFor="notes">Notes</Label>
@@ -235,7 +222,7 @@ export function InvoiceForm({ initialInvoice, isEditing = false, invoiceActions 
             {/* Discount */}
             <div>
               <Label htmlFor="discount">Discount (optional) {isFinancialFieldsLocked && "🔒"}</Label>
-              <div className="flex items-center space-x-3 mt-2">
+              <div className="flex flex-wrap items-center gap-2 mt-2">
                 <Input
                   id="discount"
                   type="number"
@@ -250,9 +237,9 @@ export function InvoiceForm({ initialInvoice, isEditing = false, invoiceActions 
                       discountValue: Number(e.target.value) || 0,
                     }))
                   }
-                  className="flex-1"
+                  className="w-1/2 sm:w-[220px]"
                 />
-                <div className="flex items-center space-x-1 bg-gray-100 rounded-md p-1">
+                <div className="flex items-center space-x-1 bg-gray-100 rounded-md p-1 flex-shrink-0">
                   <button
                     type="button"
                     disabled={isFinancialFieldsLocked}
@@ -262,7 +249,7 @@ export function InvoiceForm({ initialInvoice, isEditing = false, invoiceActions 
                         discountType: "percentage",
                       }))
                     }
-                    className={`px-3 py-1 text-sm rounded transition-colors ${
+                    className={`px-2 sm:px-3 py-1 text-sm rounded transition-colors ${
                       formData.discountType === "percentage"
                         ? "bg-white shadow-sm text-gray-900"
                         : "text-gray-600 hover:text-gray-900"
@@ -279,23 +266,23 @@ export function InvoiceForm({ initialInvoice, isEditing = false, invoiceActions 
                         discountType: "amount",
                       }))
                     }
-                    className={`px-3 py-1 text-sm rounded transition-colors ${
+                    className={`px-2 sm:px-3 py-1 text-sm rounded transition-colors ${
                       formData.discountType === "amount"
                         ? "bg-white shadow-sm text-gray-900"
                         : "text-gray-600 hover:text-gray-900"
                     } ${isFinancialFieldsLocked ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
-                    $
+                    {getCurrencySymbol(formData.currency)}
                   </button>
                 </div>
               </div>
             </div>
 
             {/* Tax */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div>
                 <Label htmlFor="tax1Name">Sales Tax (optional) {isFinancialFieldsLocked && "🔒"}</Label>
-                <div className="flex items-center space-x-2 mt-2">
+                <div className="flex flex-wrap items-center gap-2 mt-2">
                   <Input
                     id="tax1Name"
                     placeholder="Tax Name (Tax ID)"
@@ -307,27 +294,30 @@ export function InvoiceForm({ initialInvoice, isEditing = false, invoiceActions 
                         tax1Name: e.target.value,
                       }))
                     }
+                    className="w-full w-1/2 sm:w-[220px]"
                   />
-                  <Input
-                    type="number"
-                    placeholder="0.0000"
-                    disabled={isFinancialFieldsLocked}
-                    value={formData.tax1Rate === 0 ? "" : formData.tax1Rate}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        tax1Rate: Number(e.target.value) || 0,
-                      }))
-                    }
-                  />
-                  <span className="text-sm text-gray-500">%</span>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      placeholder="0.00"
+                      step="0.01"
+                      disabled={isFinancialFieldsLocked}
+                      value={formData.tax1Rate === 0 ? "" : formData.tax1Rate}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          tax1Rate: Number(e.target.value) || 0,
+                        }))
+                      }
+                      className="w-24 sm:w-28"
+                    />
+                    <span className="text-sm text-gray-500">%</span>
+                  </div>
                 </div>
               </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="tax2Name">Second Tax (optional) {isFinancialFieldsLocked && "🔒"}</Label>
-                <div className="flex items-center space-x-2 mt-2">
+                <div className="flex flex-wrap items-center gap-2 mt-2">
                   <Input
                     id="tax2Name"
                     placeholder="Tax Name (Tax ID)"
@@ -339,81 +329,63 @@ export function InvoiceForm({ initialInvoice, isEditing = false, invoiceActions 
                         tax2Name: e.target.value,
                       }))
                     }
+                    className="w-1/2 sm:w-[220px]"
                   />
-                  <Input
-                    type="number"
-                    placeholder="0.0000"
-                    disabled={isFinancialFieldsLocked}
-                    value={formData.tax2Rate === 0 ? "" : formData.tax2Rate}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        tax2Rate: Number(e.target.value) || 0,
-                      }))
-                    }
-                  />
-                  <span className="text-sm text-gray-500">%</span>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      placeholder="0.00"
+                      step="0.01"
+                      disabled={isFinancialFieldsLocked}
+                      value={formData.tax2Rate === 0 ? "" : formData.tax2Rate}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          tax2Rate: Number(e.target.value) || 0,
+                        }))
+                      }
+                      className="w-24 sm:w-28"
+                    />
+                    <span className="text-sm text-gray-500">%</span>
+                  </div>
                 </div>
               </div>
             </div>
+          </CardContent>
+        </Card>
 
-            {/* Payment Methods */}
-            <div className="space-y-3">
-              <div className="flex items-center space-x-2">
-                  <Switch
-                    id="acceptCreditCards"
-                    checked={formData.acceptCreditCards}
-                    disabled={!stripeConnected}
-                    onCheckedChange={(checked: boolean) => {
-                      // Track Stripe toggle
-                      posthog.capture("invoice_stripe_toggled", {
-                        enabled: checked,
-                        invoiceId: initialInvoice?.id || null,
-                      });
-                      
-                      setFormData((prev) => ({
-                        ...prev,
-                        acceptCreditCards: checked,
-                      }));
-                    }}
-                  />
-                <Label htmlFor="acceptCreditCards">
-                  Accept Credit Cards (Stripe)
-                </Label>
-              </div>
-
-              {!stripeConnected && (
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    <div className="flex items-center justify-between">
-                      <span>Connect Stripe in Settings to accept payments</span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        // Track Stripe connect click from invoice form
-                        posthog.capture("stripe_connect_clicked", {
-                          source: "invoice_form",
-                        });
-                        router.push("/settings");
-                      }}
-                    >
-                      <CreditCard className="h-4 w-4 mr-2" />
-                      Connect Stripe
-                      </Button>
-                    </div>
-                  </AlertDescription>
-                </Alert>
-              )}
+        {/* Payment Methods */}
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col">
+              <CardTitle>Payment Methods</CardTitle>
+              <p className="text-xs text-gray-600 mt-2">
+                Choose the payment methods you wish to accept for this invoice. Only enabled and connected payment methods are available.
+              </p>
             </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <PaymentMethodsSelector
+              stripeEnabled={formData.acceptCreditCards}
+              stripeConnected={stripeConnected}
+              paypalEnabled={formData.acceptPaypal}
+              paypalConnected={paypalConnected}
+              isLoading={isLoadingPaymentProviders}
+              onStripeToggle={(enabled) =>
+                setFormData((prev) => ({ ...prev, acceptCreditCards: enabled }))
+              }
+              onPaypalToggle={(enabled) =>
+                setFormData((prev) => ({ ...prev, acceptPaypal: enabled }))
+              }
+              invoiceId={initialInvoice?.id || null}
+            />
           </CardContent>
         </Card>
 
       </div>
 
-      {/* Right Panel - Sticky */}
-      <div className="w-80 flex flex-col gap-4 sticky top-6 self-start">
+      {/* Right Panel - Sticky on desktop, normal on mobile */}
+      <div className="w-full lg:w-80 flex flex-col gap-4 lg:sticky lg:top-6 lg:self-start">
         <CalculationsPanel
           subtotal={calculateSubtotal()}
           discount={calculateDiscount()}

@@ -23,6 +23,7 @@ interface InvoiceItemProps {
   canRemove: boolean;
   disabled?: boolean;
   showQuantity?: boolean;
+  errors?: { description?: boolean; amount?: boolean };
 }
 
 export function InvoiceItem({
@@ -33,13 +34,25 @@ export function InvoiceItem({
   canRemove,
   disabled = false,
   showQuantity = false,
+  errors,
 }: InvoiceItemProps) {
+  const hasErrors = errors && (errors.description || errors.amount);
+  
   return (
-    <div className={`border rounded-lg p-4 space-y-4 ${disabled ? "bg-gray-50 opacity-60" : ""}`}>
-      <div className="grid grid-cols-1 md:grid-cols-8 gap-2">
+    <div 
+      id={`item-${item.id}`}
+      className={`border rounded-lg p-3 sm:p-4 space-y-3 sm:space-y-4 transition-colors ${
+        disabled ? "bg-gray-50 opacity-60" : ""
+      } ${
+        hasErrors ? "border-red-300 bg-red-50/30" : "border-gray-200"
+      }`}
+    >
+      <div className="grid grid-cols-1 md:grid-cols-8 gap-3 sm:gap-2">
         {/* Description */}
-        <div className="col-span-3">
-          <Label htmlFor={`description-${item.id}`}>Name *</Label>
+        <div className="md:col-span-3">
+          <Label htmlFor={`description-${item.id}`} className={errors?.description ? "text-red-600" : ""}>
+            Description *
+          </Label>
           <Input
             id={`description-${item.id}`}
             disabled={disabled}
@@ -47,12 +60,18 @@ export function InvoiceItem({
             onChange={(e) => onChange("description", e.target.value)}
             placeholder="Enter item description"
             required
+            className={errors?.description ? "border-red-500 focus-visible:ring-red-500" : ""}
           />
+          {errors?.description && (
+            <p className="text-xs text-red-600 mt-1">Description is required</p>
+          )}
         </div>
 
         {/* Amount */}
-        <div className="col-span-1">
-          <Label htmlFor={`amount-${item.id}`}>Amount</Label>
+        <div className="md:col-span-1">
+          <Label htmlFor={`amount-${item.id}`} className={errors?.amount ? "text-red-600" : ""}>
+            Amount *
+          </Label>
           <Input
             id={`amount-${item.id}`}
             type="number"
@@ -62,15 +81,19 @@ export function InvoiceItem({
             value={item.amount === 0 ? "" : item.amount}
             onChange={(e) => onChange("amount", Number(e.target.value) || 0)}
             placeholder="0.00"
+            className={errors?.amount ? "border-red-500 focus-visible:ring-red-500" : ""}
           />
+          {errors?.amount && (
+            <p className="text-xs text-red-600 mt-1">Amount must be greater than 0</p>
+          )}
         </div>
-          <div className="col-span-2 flex gap-2">
+          <div className="md:col-span-2 flex flex-wrap items-end gap-2">
             {showQuantity && (
               <>
-                <div className="flex items-end justify-center text-sm text-gray-500 mb-2">
+                <div className="hidden md:flex items-end justify-center text-sm text-gray-500 mb-2">
                   ×
                 </div>
-                <div className="flex flex-col">
+                <div className="flex flex-col flex-1 md:flex-initial min-w-[100px]">
                   <Label htmlFor={`quantity-${item.id}`}>Quantity</Label>
                   <Input
                     id={`quantity-${item.id}`}
@@ -96,11 +119,10 @@ export function InvoiceItem({
                     }}
                     placeholder="1"
                   />
-
                 </div>
-                <div className="flex items-end justify-center text-sm text-gray-500 mb-2">
+                <div className="flex items-end text-sm text-gray-500 mb-2">
                   <span className="mr-2">=</span>
-                  <strong className="text-gray-900">
+                  <strong className="text-gray-900 whitespace-nowrap">
                     {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
                       Number(item.amount) * (Number(item.quantity || 1))
                     )}
@@ -109,7 +131,7 @@ export function InvoiceItem({
               </>
             )}
           </div>
-        <div className="flex items-center justify-end col-span-2 mt-6">
+        <div className="flex items-center justify-end md:col-span-2 md:mt-6">
           <div className="flex items-center gap-1">
             <Switch
               id={`show-qty-${item.id}`}

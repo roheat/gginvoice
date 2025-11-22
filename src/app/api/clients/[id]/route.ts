@@ -87,19 +87,53 @@ export async function PUT(
       );
     }
 
+    // Check if email is being changed and if it conflicts with another client
+    const trimmedEmail = email ? email.toString().trim() : null;
+    if (trimmedEmail && trimmedEmail !== existingClient.email) {
+      const conflictingClient = await db.client.findFirst({
+        where: {
+          userId: session.user.id,
+          email: trimmedEmail,
+          NOT: { id },
+        },
+      });
+
+      if (conflictingClient) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "A client with this email already exists",
+          },
+          { status: 409 }
+        );
+      }
+    }
+
     const updatedClient = await db.client.update({
       where: { id },
       data: {
         name: name.toString().trim(),
-        email: email ? email.toString().trim() : null,
+        email: trimmedEmail,
         address: address === undefined ? existingClient.address : address || null,
         phone: phone === undefined ? existingClient.phone : phone || null,
       },
     });
 
     return NextResponse.json({ success: true, client: updatedClient });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating client:", error);
+    
+    // Handle Prisma unique constraint violation
+    if (error.code === "P2002" && error.meta?.target?.includes("email")) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "A client with this email already exists",
+        },
+        { status: 409 }
+      );
+    }
+
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 }

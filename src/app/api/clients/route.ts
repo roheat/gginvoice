@@ -31,6 +31,26 @@ export async function POST(request: NextRequest) {
 
     const { name, email, address, phone } = parsed.data;
 
+    // Check if client with same email already exists for this user
+    if (email) {
+      const existingClient = await db.client.findFirst({
+        where: {
+          userId: session.user.id,
+          email: email.trim(),
+        },
+      });
+
+      if (existingClient) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "A client with this email already exists",
+          },
+          { status: 409 }
+        );
+      }
+    }
+
     const client = await db.client.create({
       data: {
         name,
@@ -45,8 +65,20 @@ export async function POST(request: NextRequest) {
       success: true,
       client,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Client creation error:", error);
+    
+    // Handle Prisma unique constraint violation
+    if (error.code === "P2002" && error.meta?.target?.includes("email")) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "A client with this email already exists",
+        },
+        { status: 409 }
+      );
+    }
+
     return NextResponse.json(
       {
         success: false,
@@ -57,7 +89,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -65,6 +97,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Get all clients for the user
     const clients = await db.client.findMany({
       where: {
         userId: session.user.id,

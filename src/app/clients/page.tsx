@@ -5,8 +5,9 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { MainContent } from "@/components/dashboard/main-content";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2, Loader2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Input } from "@/components/ui/input";
+import { Plus, Edit, Trash2, Search, X } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import {
@@ -17,6 +18,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ClientsTableSkeleton } from "@/components/ui/skeletons/clients-table-skeleton";
+import { Pagination } from "@/components/ui/pagination";
+import Fuse from "fuse.js";
 
 interface Client {
   id: string;
@@ -29,17 +33,22 @@ interface Client {
 
 export default function ClientsPage() {
   const router = useRouter();
-  const [clients, setClients] = useState<Client[]>([]);
+  const [allClients, setAllClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
+  // Fetch all clients on mount
   useEffect(() => {
     const fetchClients = async () => {
       try {
+        setLoading(true);
         const response = await fetch("/api/clients");
         const result = await response.json();
         if (result.success) {
-          setClients(result.clients);
+          setAllClients(result.clients || []);
         }
       } catch (error) {
         console.error("Failed to fetch clients:", error);
@@ -51,6 +60,45 @@ export default function ClientsPage() {
     fetchClients();
   }, []);
 
+  // Fuzzy search using Fuse.js
+  const fuse = useMemo(
+    () =>
+      new Fuse(allClients, {
+        keys: [
+          { name: "name", weight: 0.4 },
+          { name: "email", weight: 0.3 },
+          { name: "address", weight: 0.2 },
+          { name: "phone", weight: 0.1 },
+        ],
+        threshold: 0.3, // 0 = exact match, 1 = match anything
+        includeScore: true,
+        minMatchCharLength: 1,
+      }),
+    [allClients]
+  );
+
+  const searchedClients = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return allClients;
+    }
+    const results = fuse.search(searchQuery);
+    return results.map((result) => result.item);
+  }, [searchQuery, fuse, allClients]);
+
+  // Frontend pagination
+  const paginatedClients = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return searchedClients.slice(startIndex, endIndex);
+  }, [searchedClients, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(searchedClients.length / itemsPerPage);
+
+  // Reset to page 1 when search or page size changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, itemsPerPage]);
+
   const handleDeleteClient = async (clientId: string) => {
     if (confirm("Are you sure you want to delete this client?")) {
       try {
@@ -60,7 +108,8 @@ export default function ClientsPage() {
         });
         const result = await response.json().catch(() => null);
         if (response.ok && result && result.success) {
-          setClients((prev) => prev.filter((client) => client.id !== clientId));
+          // Remove from local state
+          setAllClients((prev) => prev.filter((c) => c.id !== clientId));
           toast.success("Client deleted");
         } else {
           const err = result?.error || "Failed to delete client";
@@ -76,6 +125,10 @@ export default function ClientsPage() {
     }
   };
 
+  const clearSearch = () => {
+    setSearchQuery("");
+  };
+
   return (
     <DashboardLayout>
       <PageHeader
@@ -87,14 +140,35 @@ export default function ClientsPage() {
         }}
       />
       <MainContent>
-        <div className="max-w-7xl mx-auto">
-          <Card>
-            <CardContent>
-              {loading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                </div>
-              ) : clients.length === 0 ? (
+        <div className="max-w-7xl mx-auto space-y-3">
+          {/* Search Bar */}
+          <div className="px-4">
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 z-10" />
+              <Input
+                type="text"
+                placeholder="Search clients by name, email, address, or phone..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 pr-10 h-10 !bg-white border-gray-200 rounded-lg shadow-sm"
+              />
+              {searchQuery && (
+                <button
+                  onClick={clearSearch}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 z-10"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Clients Table */}
+          {loading ? (
+            <ClientsTableSkeleton rows={itemsPerPage} />
+          ) : searchedClients.length === 0 ? (
+            <Card>
+              <CardContent>
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <div className="text-gray-400 mb-4">
                     <svg
@@ -112,17 +186,25 @@ export default function ClientsPage() {
                     </svg>
                   </div>
                   <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    No clients yet
+                    {searchQuery ? "No clients found" : "No clients yet"}
                   </h3>
                   <p className="text-gray-500 mb-4">
-                    Start by adding your first client.
+                    {searchQuery
+                      ? "Try adjusting your search query."
+                      : "Start by adding your first client."}
                   </p>
-                  <Button onClick={() => router.push("/clients/new")}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Your First Client
-                  </Button>
+                  {!searchQuery && (
+                    <Button onClick={() => router.push("/clients/new")}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Your First Client
+                    </Button>
+                  )}
                 </div>
-              ) : (
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="p-0">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -135,7 +217,7 @@ export default function ClientsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {clients.map((client) => (
+                    {paginatedClients.map((client) => (
                       <TableRow
                         key={client.id}
                         className="cursor-pointer"
@@ -184,9 +266,20 @@ export default function ClientsPage() {
                     ))}
                   </TableBody>
                 </Table>
-              )}
-            </CardContent>
-          </Card>
+                {searchedClients.length > 0 && (
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={searchedClients.length}
+                    itemsPerPage={itemsPerPage}
+                    onPageChange={setCurrentPage}
+                    onPageSizeChange={setItemsPerPage}
+                    pageSizeOptions={[10, 25, 50, 100]}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </MainContent>
     </DashboardLayout>

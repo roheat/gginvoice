@@ -229,8 +229,8 @@ export function PublicInvoiceDisplay({ invoice }: PublicInvoiceDisplayProps) {
         </div>
 
         {/* Invoice Card */}
-        <Card className="shadow-lg print:shadow-none print:border print:border-gray-300">
-          <CardContent className="p-6 print:p-6">
+        <Card data-testid="invoice-view-card" className="shadow-lg print:shadow-none print:border print:border-gray-300">
+          <CardContent className="p-6 print:p-6 pb-0">
             {/* Logo */}
             {invoice.user.settings?.companyLogoUrl && (
               <div className="mb-6 print:mb-5">
@@ -442,11 +442,28 @@ export function PublicInvoiceDisplay({ invoice }: PublicInvoiceDisplayProps) {
             )}
 
             {/* Footer */}
-            <div className="mt-8 pt-5 border-t border-gray-200 text-center print:mt-6 print:pt-4">
-              <p className="text-xs text-gray-500">
-                Powered by{" "}
-                <span className="font-medium text-blue-600">gginvoice</span>
-              </p>
+            <div className="mt-8 pt-5 border-t border-gray-200 print:mt-6 print:pt-4">
+              {/* Disclaimer */}
+              <div className="mb-4 text-center">
+                <p className="text-xs text-gray-500 italic">
+                  This invoice is electronically generated and does not require a signature.
+                </p>
+              </div>
+              
+              {/* Logo and Powered by */}
+              <div className="flex items-center justify-center gap-2">
+                <p className="text-xs text-gray-500">
+                  Powered by{" "}
+                </p>
+                  <div className="relative w-24 h-12">
+                  <Image
+                    src="/logo-primary.svg"
+                    alt="gginvoice"
+                    fill
+                    className="object-contain"
+                  />
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>

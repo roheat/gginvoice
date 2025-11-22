@@ -7,7 +7,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, X } from "lucide-react";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { AuthSkeleton } from "@/components/ui/skeletons/auth-skeleton";
 
 function LoginContent() {
   const [isLoading, setIsLoading] = useState(false);
@@ -68,7 +68,7 @@ function LoginContent() {
 
   // Show loading state while checking session
   if (status === "loading") {
-    return <LoadingSpinner />;
+    return <AuthSkeleton />;
   }
 
   // Don't render login form if already authenticated (will redirect)
@@ -237,7 +237,7 @@ function LoginContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<LoadingSpinner />}>
+    <Suspense fallback={<AuthSkeleton />}>
       <LoginContent />
     </Suspense>
   );

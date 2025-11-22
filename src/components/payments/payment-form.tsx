@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CreditCard, Shield, AlertCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { PaymentFormSkeleton } from "@/components/ui/skeletons/payment-form-skeleton";
 
 interface PaymentFormProps {
   invoice: {
@@ -290,12 +291,7 @@ export function PaymentForm({ invoice, onPaymentSuccess }: PaymentFormProps) {
   }, [invoice.id, invoice.total, invoice.currency]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
-        <span className="ml-2 text-gray-600">Loading payment form...</span>
-      </div>
-    );
+    return <PaymentFormSkeleton />;
   }
 
   if (initError || !stripePromise || !clientSecret) {

@@ -100,7 +100,7 @@ export async function deleteCompanyLogo(filePath: string) {
  */
 export function validateLogoFile(file: File): { isValid: boolean; error?: string } {
   const maxSize = 1024 * 1024 // 1MB
-  const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp']
+  const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg']
 
   if (file.size > maxSize) {
     return {
@@ -112,7 +112,7 @@ export function validateLogoFile(file: File): { isValid: boolean; error?: string
   if (!allowedTypes.includes(file.type)) {
     return {
       isValid: false,
-      error: 'File must be PNG, JPEG, SVG, or WebP'
+      error: 'File must be PNG or JPG'
     }
   }
 

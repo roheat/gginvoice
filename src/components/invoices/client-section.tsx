@@ -33,6 +33,7 @@ interface ClientSectionProps {
   };
   onNewClientChange: (field: string, value: string) => void;
   onNewClientSubmit: () => void;
+  hasError?: boolean;
 }
 
 export function ClientSection({
@@ -43,13 +44,14 @@ export function ClientSection({
   newClientData,
   onNewClientChange,
   onNewClientSubmit,
+  hasError = false,
 }: ClientSectionProps) {
   const selectedClient = clients.find(
     (client) => client.id === selectedClientId
   );
 
   return (
-    <Card>
+    <Card className={hasError ? "border-red-300" : ""}>
       <CardHeader>
         <CardTitle>Client</CardTitle>
       </CardHeader>
@@ -58,9 +60,9 @@ export function ClientSection({
           <>
             {/* Client Select */}
             <div className="space-y-2">
-              <Label>Select Client</Label>
+              <Label className={hasError ? "text-red-600" : ""}>Select Client *</Label>
               <Select value={selectedClientId} onValueChange={onClientSelect}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className={`w-full ${hasError ? "border-red-500 focus-visible:ring-red-500" : ""}`}>
                   <SelectValue placeholder="Choose a client or add new..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -85,6 +87,9 @@ export function ClientSection({
                   </SelectItem>
                 </SelectContent>
               </Select>
+              {hasError && (
+                <p className="text-xs text-red-600 mt-1">Please select or create a client</p>
+              )}
             </div>
 
             {/* Selected Client Info */}

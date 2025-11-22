@@ -38,6 +38,7 @@ model Client {
   invoices  Invoice[]
 
   @@index([userId])
+  @@unique([userId, email])
 }
 
 model Invoice {
