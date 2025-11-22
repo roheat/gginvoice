@@ -14,6 +14,9 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "gginvoice - Invoice Management Made Simple",
   description: "Professional invoice management for your business",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
@@ -22,7 +25,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased`}>
         <AuthSessionProvider>
           <PosthogProvider>

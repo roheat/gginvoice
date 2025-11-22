@@ -155,21 +155,19 @@ function SidebarContent({ pathname, onSignOut, session }: SidebarContentProps) {
   return (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="flex items-center justify-center h-16 flex-shrink-0 px-4 mt-3">
-        <div className="flex items-center justify-center mt-3">
-            <div className="relative h-12 w-[225px] md:h-16 md:w-45 overflow-hidden">
-              <Image
-                src="/logo-white.svg"
-                alt="gginvoice"
-                fill
-                className="object-cover"
-              />
-            </div>
+      <div className="flex items-center h-16 flex-shrink-0 px-4 mt-3">
+        <div className="relative">
+          <Image
+            src="/logo-white.svg"
+            alt="gginvoice"
+            width={120}
+            height={48}
+          />
         </div>
       </div>
 
       {/* Navigation */}
-      <div className="flex-1 flex flex-col pb-4 mt-3 overflow-y-auto">
+      <div className="flex-1 flex flex-col pb-4 overflow-y-auto">
         <nav className="mt-5 flex-1 px-2 space-y-1">
           {navigation.map((item) => {
             const isActive = pathname === item.href;

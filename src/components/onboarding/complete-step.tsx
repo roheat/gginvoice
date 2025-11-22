@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { posthog } from "@/lib/posthog";
@@ -24,7 +24,7 @@ export function CompleteStep({ steps }: CompleteStepProps) {
       try {
         const startTime = sessionStorage.getItem("onboarding_start_time");
         const duration = startTime ? Date.now() - parseInt(startTime) : 0;
-        
+
         await fetch("/api/onboarding/complete", {
           method: "POST",
         });
@@ -72,12 +72,16 @@ export function CompleteStep({ steps }: CompleteStepProps) {
         <CardContent className="space-y-3">
           <div className="flex items-center gap-3">
             <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
-            <span className="text-gray-700">Company information configured</span>
+            <span className="text-gray-700">
+              Company information configured
+            </span>
           </div>
           {steps.stripe && (
             <div className="flex items-center gap-3">
               <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
-              <span className="text-gray-700">Stripe payment processing connected</span>
+              <span className="text-gray-700">
+                Stripe payment processing connected
+              </span>
             </div>
           )}
           {steps.invoice && (
@@ -102,4 +106,3 @@ export function CompleteStep({ steps }: CompleteStepProps) {
     </div>
   );
 }
-

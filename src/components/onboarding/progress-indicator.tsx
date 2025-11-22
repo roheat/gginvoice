@@ -1,7 +1,6 @@
 "use client";
 
 import { Check } from "lucide-react";
-import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 type Step = "company" | "stripe" | "invoice" | "complete";
@@ -18,9 +17,24 @@ interface ProgressIndicatorProps {
 }
 
 const steps: ProgressStep[] = [
-  { id: "company", name: "Company Setup", number: 1, description: "Add your business details" },
-  { id: "stripe", name: "Payment Setup", number: 2, description: "Connect Stripe (optional)" },
-  { id: "invoice", name: "First Invoice", number: 3, description: "Create your first invoice (optional)" },
+  {
+    id: "company",
+    name: "Company Setup",
+    number: 1,
+    description: "Add your business details",
+  },
+  {
+    id: "stripe",
+    name: "Payment Setup",
+    number: 2,
+    description: "Connect Stripe (optional)",
+  },
+  {
+    id: "invoice",
+    name: "First Invoice",
+    number: 3,
+    description: "Create your first invoice (optional)",
+  },
 ];
 
 export function ProgressIndicator({ currentStep }: ProgressIndicatorProps) {
@@ -102,4 +116,3 @@ export function ProgressIndicator({ currentStep }: ProgressIndicatorProps) {
     </div>
   );
 }
-

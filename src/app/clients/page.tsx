@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { MainContent } from "@/components/dashboard/main-content";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -91,8 +91,8 @@ export default function ClientsPage() {
           <Card>
             <CardContent>
               {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="text-gray-500">Loading clients...</div>
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
                 </div>
               ) : clients.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -117,9 +117,7 @@ export default function ClientsPage() {
                   <p className="text-gray-500 mb-4">
                     Start by adding your first client.
                   </p>
-                  <Button
-                    onClick={() => router.push("/clients/new")}
-                  >
+                  <Button onClick={() => router.push("/clients/new")}>
                     <Plus className="h-4 w-4 mr-2" />
                     Add Your First Client
                   </Button>
@@ -138,10 +136,12 @@ export default function ClientsPage() {
                   </TableHeader>
                   <TableBody>
                     {clients.map((client) => (
-                      <TableRow 
+                      <TableRow
                         key={client.id}
                         className="cursor-pointer"
-                        onClick={() => router.push(`/clients/${client.id}/edit`)}
+                        onClick={() =>
+                          router.push(`/clients/${client.id}/edit`)
+                        }
                       >
                         <TableCell className="font-medium">
                           {client.name}
@@ -152,12 +152,17 @@ export default function ClientsPage() {
                         <TableCell>
                           {new Date(client.createdAt).toLocaleDateString()}
                         </TableCell>
-                        <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                        <TableCell
+                          className="text-right"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <div className="flex items-center justify-end gap-0">
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => router.push(`/clients/${client.id}/edit`)}
+                              onClick={() =>
+                                router.push(`/clients/${client.id}/edit`)
+                              }
                               className="border border-gray-200 -mr-px rounded-l-md rounded-r-none bg-white text-gray-700 hover:bg-gray-50"
                             >
                               <Edit className="h-4 w-4 mr-1" />

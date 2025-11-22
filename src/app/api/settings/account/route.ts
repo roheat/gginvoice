@@ -10,8 +10,14 @@ const settingsSchema = z.object({
   companyAddress: z.string().optional().nullable(),
   companyPhone: z.string().optional().nullable(),
   companyWebsite: z.string().optional().nullable(),
+  // Keep these optional for backward compatibility, but not used in UI
   defaultCurrency: z.string().min(1).optional(),
-  defaultTaxRate: z.preprocess((v) => (v === "" ? undefined : Number(v)), z.number().nonnegative()).optional(),
+  defaultTaxRate: z
+    .preprocess(
+      (v) => (v === "" ? undefined : Number(v)),
+      z.number().nonnegative()
+    )
+    .optional(),
   emailNotifications: z.boolean().optional(),
 });
 
@@ -19,7 +25,10 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     if (!session || !session.user || !session.user.id) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
     const user = await db.user.findUnique({
@@ -28,13 +37,22 @@ export async function GET() {
     });
 
     if (!user) {
-      return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
+      return NextResponse.json(
+        { success: false, error: "User not found" },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json({ success: true, user });
   } catch (error) {
     console.error("Error fetching settings:", error);
-    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -42,13 +60,23 @@ export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session || !session.user || !session.user.id) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
     const body = await request.json();
     const parsed = settingsSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ success: false, error: parsed.error.flatten().formErrors.join(", ") || "Invalid input" }, { status: 400 });
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            parsed.error.flatten().formErrors.join(", ") || "Invalid input",
+        },
+        { status: 400 }
+      );
     }
 
     const data = parsed.data;
@@ -75,21 +103,40 @@ export async function PUT(request: NextRequest) {
         emailNotifications: data.emailNotifications ?? true,
       },
       update: {
-        defaultCurrency: data.defaultCurrency || undefined,
-        defaultTaxRate: data.defaultTaxRate ?? undefined,
-        companyName: data.companyName === undefined ? undefined : data.companyName,
-        companyAddress: data.companyAddress === undefined ? undefined : data.companyAddress,
-        companyPhone: data.companyPhone === undefined ? undefined : data.companyPhone,
-        companyWebsite: data.companyWebsite === undefined ? undefined : data.companyWebsite,
-        emailNotifications: data.emailNotifications === undefined ? undefined : data.emailNotifications,
+        // Only update fields that are explicitly provided
+        ...(data.defaultCurrency !== undefined && {
+          defaultCurrency: data.defaultCurrency,
+        }),
+        ...(data.defaultTaxRate !== undefined && {
+          defaultTaxRate: data.defaultTaxRate,
+        }),
+        ...(data.companyName !== undefined && {
+          companyName: data.companyName,
+        }),
+        ...(data.companyAddress !== undefined && {
+          companyAddress: data.companyAddress,
+        }),
+        ...(data.companyPhone !== undefined && {
+          companyPhone: data.companyPhone,
+        }),
+        ...(data.companyWebsite !== undefined && {
+          companyWebsite: data.companyWebsite,
+        }),
+        ...(data.emailNotifications !== undefined && {
+          emailNotifications: data.emailNotifications,
+        }),
       },
     });
 
     return NextResponse.json({ success: true, settings: updatedSettings });
   } catch (error) {
     console.error("Error updating settings:", error);
-    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 }
+    );
   }
 }
-
-

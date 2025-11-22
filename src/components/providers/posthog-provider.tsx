@@ -12,8 +12,11 @@ function PosthogPageView() {
   useEffect(() => {
     if (!isPosthogConfigured) return;
 
-    const url = pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : "");
-    posthog.capture("$pageview", { 
+    // Only capture after component mounts (client-side only)
+    const url =
+      pathname +
+      (searchParams?.toString() ? `?${searchParams.toString()}` : "");
+    posthog.capture("$pageview", {
       $current_url: url,
     });
   }, [pathname, searchParams]);
@@ -35,8 +38,14 @@ export function PosthogProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isPosthogConfigured) return;
 
+    // Only run on client-side after mount
     if (session.status === "authenticated" && session.data?.user) {
-      const user = session.data.user as { id?: string; email?: string | null; name?: string | null; image?: string | null };
+      const user = session.data.user as {
+        id?: string;
+        email?: string | null;
+        name?: string | null;
+        image?: string | null;
+      };
       if (user.id) {
         posthog.identify(user.id, {
           email: user.email,
@@ -57,4 +66,3 @@ export function PosthogProvider({ children }: { children: ReactNode }) {
     </>
   );
 }
-

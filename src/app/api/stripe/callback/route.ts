@@ -33,9 +33,8 @@ export async function GET(request: NextRequest) {
       try {
         const user = await db.user.findUnique({
           where: { id: userId },
-          select: { onboardingCompletedAt: true },
         });
-        return !user?.onboardingCompletedAt ? "/onboarding" : "/settings";
+        return !user?.onboardingCompletedAt ? "/onboarding?step=stripe" : "/settings";
       } catch {
         return "/settings";
       }
@@ -195,12 +194,11 @@ export async function GET(request: NextRequest) {
       // Check if user has completed onboarding - redirect back to onboarding if not
       const userWithOnboarding = await db.user.findUnique({
         where: { id: user.id },
-        select: { onboardingCompletedAt: true },
       });
 
       // Redirect to onboarding if not completed, otherwise to settings
       const redirectPath = !userWithOnboarding?.onboardingCompletedAt
-        ? "/onboarding"
+        ? "/onboarding?step=stripe"
         : "/settings";
       
       const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";

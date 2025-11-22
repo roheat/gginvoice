@@ -1,34 +1,52 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Sidebar } from "./sidebar";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { status, data: session } = useSession();
+  const { status } = useSession();
   const router = useRouter();
-  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
-
-  useEffect(() => {
-    if (status === "authenticated") {
-      checkOnboarding();
-    } else if (status === "unauthenticated") {
-      setCheckingOnboarding(false);
-    }
-  }, [status]);
+  const pathname = usePathname();
+  const [hasCheckedOnboarding, setHasCheckedOnboarding] = useState(false);
 
   const checkOnboarding = async () => {
     try {
+      // Always allow manual navigation to onboarding page (hybrid approach)
+      // Users can access /onboarding anytime to update settings
+      if (pathname === "/onboarding") {
+        setHasCheckedOnboarding(true);
+        return;
+      }
+
+      // Check if onboarding was just completed (query param)
+      const urlParams = new URLSearchParams(window.location.search);
+      const onboardingComplete =
+        urlParams.get("onboarding_complete") === "true";
+
+      if (onboardingComplete) {
+        // Clean up the query parameter
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete("onboarding_complete");
+        window.history.replaceState({}, "", newUrl.toString());
+        setHasCheckedOnboarding(true);
+        return;
+      }
+
+      // For dashboard pages (invoices, clients, settings, etc.):
+      // Check if onboarding is complete, and redirect if not
       const res = await fetch("/api/onboarding/status");
       if (res.ok) {
         const data = await res.json();
-        
+
         // Redirect to onboarding if not complete
+        // This ensures first-time users complete setup before accessing dashboard
         if (!data.isComplete) {
           router.push("/onboarding");
           return;
@@ -38,19 +56,21 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       console.error("Onboarding check failed:", error);
       // Continue to dashboard on error
     } finally {
-      setCheckingOnboarding(false);
+      setHasCheckedOnboarding(true);
     }
   };
 
-  if (status === "loading" || checkingOnboarding) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
+  // Only check onboarding once on initial mount, not on every navigation
+  useEffect(() => {
+    if (status === "authenticated" && !hasCheckedOnboarding) {
+      checkOnboarding();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, hasCheckedOnboarding]);
+
+  // Show loading only on initial session/auth check, not during navigation
+  if (status === "loading") {
+    return <LoadingSpinner />;
   }
 
   if (status === "unauthenticated") {
