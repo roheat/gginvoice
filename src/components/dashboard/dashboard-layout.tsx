@@ -96,7 +96,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     };
 
     checkOnboarding();
-  }, [status, router]); // Removed pathname from dependencies to prevent re-checking on route changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, router]); // pathname intentionally excluded to prevent re-checking on route changes
 
   // Show loading during initial auth check only
   if (status === "loading" && !initialCheckComplete) {

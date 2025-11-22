@@ -307,93 +307,7 @@ const resolveCompanyName = (user: User) => {
   );
 };
 
-// Helper function to convert image URL to base64 with proper error handling
-const imageToBase64 = async (url: string): Promise<string | null> => {
-  try {
-    // Handle relative URLs and ensure we have a full URL
-    let imageUrl = url;
-    if (!url.startsWith('http')) {
-      // If it's a relative URL, prepend the origin
-      imageUrl = url.startsWith('/') 
-        ? `${window.location.origin}${url}`
-        : `${window.location.origin}/${url}`;
-    }
-    
-    console.log(`Fetching image from: ${imageUrl}`);
-    
-    const response = await fetch(imageUrl, {
-      mode: 'cors',
-      credentials: 'omit',
-      cache: 'no-cache',
-    });
-    
-    if (!response.ok) {
-      console.error(`Failed to fetch image: ${imageUrl}`, response.status, response.statusText);
-      return null;
-    }
-    
-    const blob = await response.blob();
-    const contentType = blob.type;
-    
-    // Check if it's an SVG
-    if (contentType === 'image/svg+xml' || url.toLowerCase().endsWith('.svg')) {
-      const svgText = await response.text();
-      // For react-pdf, use base64 encoding for SVG
-      const base64Svg = `data:image/svg+xml;base64,${btoa(svgText)}`;
-      console.log(`Converted SVG to base64, length: ${base64Svg.length}`);
-      return base64Svg;
-    }
-    
-    // For other image types, use FileReader
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        console.log(`Converted image to base64, type: ${contentType}, length: ${base64String.length}`);
-        resolve(base64String);
-      };
-      reader.onerror = (error) => {
-        console.error(`Error reading image blob: ${imageUrl}`, error);
-        reject(error);
-      };
-      reader.readAsDataURL(blob);
-    });
-  } catch (error) {
-    console.error(`Error converting image to base64: ${url}`, error);
-    return null;
-  }
-};
-
-// Helper function to get base64 logo (for gginvoice logo)
-const getGgInvoiceLogoBase64 = async (): Promise<string | null> => {
-  try {
-    // Try to fetch the SVG and convert to base64
-    const logoUrl = `${window.location.origin}/logo-primary.svg`;
-    const response = await fetch(logoUrl, {
-      mode: 'cors',
-      credentials: 'omit',
-    });
-    
-    if (!response.ok) {
-      console.error("Failed to fetch gginvoice logo", response.status);
-      return null;
-    }
-    
-    const svgText = await response.text();
-    
-    // For react-pdf, we need to use base64 encoding for SVG
-    // First, clean the SVG and ensure it's valid
-    const cleanedSvg = svgText.trim();
-    
-    // Convert to base64
-    const base64Svg = `data:image/svg+xml;base64,${btoa(cleanedSvg)}`;
-    
-    return base64Svg;
-  } catch (error) {
-    console.error("Error loading gginvoice logo:", error);
-    return null;
-  }
-};
+// Old helper functions removed - now using image-to-base64.ts utility
 
 const InvoicePDF = ({ invoice, companyLogoBase64, gginvoiceLogoBase64 }: { 
   invoice: Invoice;
@@ -463,6 +377,7 @@ const InvoicePDF = ({ invoice, companyLogoBase64, gginvoiceLogoBase64 }: {
       <Page size="A4" style={styles.page}>
         {/* Company Logo */}
         {companyLogoBase64 && companyLogoBase64.length > 0 && companyLogoBase64.startsWith('data:image') ? (
+          // eslint-disable-next-line jsx-a11y/alt-text
           <Image 
             src={companyLogoBase64} 
             style={styles.logo}
@@ -623,6 +538,7 @@ const InvoicePDF = ({ invoice, companyLogoBase64, gginvoiceLogoBase64 }: {
             This invoice is electronically generated and does not require a signature.
           </Text>
           {gginvoiceLogoBase64 && gginvoiceLogoBase64.length > 0 && gginvoiceLogoBase64.startsWith('data:image') ? (
+            // eslint-disable-next-line jsx-a11y/alt-text
             <Image
               src={gginvoiceLogoBase64}
               style={styles.footerLogo}

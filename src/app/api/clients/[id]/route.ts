@@ -120,11 +120,11 @@ export async function PUT(
     });
 
     return NextResponse.json({ success: true, client: updatedClient });
-  } catch (error: any) {
-    console.error("Error updating client:", error);
+  } catch (error) {
+    console.error("Error updating client:", error instanceof Error ? error.message : String(error));
     
     // Handle Prisma unique constraint violation
-    if (error.code === "P2002" && error.meta?.target?.includes("email")) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === "P2002" && 'meta' in error && error.meta && typeof error.meta === 'object' && 'target' in error.meta && Array.isArray(error.meta.target) && error.meta.target.includes("email")) {
       return NextResponse.json(
         {
           success: false,

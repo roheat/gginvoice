@@ -20,7 +20,6 @@ import { ClientSection } from "./client-section";
 import { InvoiceItem, InvoiceItemData } from "./invoice-item";
 import { PaymentMethodsSelector } from "./payment-methods-selector";
 import { useInvoiceForm, InitialInvoice } from "@/hooks/use-invoice-form";
-import { posthog } from "@/lib/posthog";
 
  
 

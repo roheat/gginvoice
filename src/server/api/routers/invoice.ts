@@ -198,7 +198,7 @@ export const invoiceRouter = router({
     .input(
       z.object({
         id: z.string(),
-        paymentRef: z.string().min(1, "Payment reference is required"),
+        paymentRef: z.string().optional(),
         amount: z.number().optional(),
         currency: z.string().optional(),
         notes: z.string().optional(),
@@ -220,7 +220,7 @@ export const invoiceRouter = router({
       const result = await invoiceService.markInvoicePaid(
         input.id,
         ctx.session.user.id,
-        input.paymentRef,
+        input.paymentRef || undefined,
         input.amount,
         input.currency,
         input.notes

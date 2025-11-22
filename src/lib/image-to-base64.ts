@@ -18,7 +18,8 @@ export async function imageToBase64(imageUrl: string): Promise<string> {
       if (!response.ok) {
         throw new Error(`Failed to fetch image: ${response.status}`);
       }
-      isSvg = imageUrl.toLowerCase().endsWith('.svg') || response.headers.get('content-type')?.includes('svg');
+      const contentType = response.headers.get('content-type');
+      isSvg = imageUrl.toLowerCase().endsWith('.svg') || (contentType?.includes('svg') ?? false);
     } else {
       // For external URLs, try direct fetch first, then proxy if CORS fails
       try {
@@ -28,7 +29,8 @@ export async function imageToBase64(imageUrl: string): Promise<string> {
           credentials: 'omit',
         });
         if (response.ok) {
-          isSvg = imageUrl.toLowerCase().endsWith('.svg') || response.headers.get('content-type')?.includes('svg');
+          const contentType = response.headers.get('content-type');
+          isSvg = imageUrl.toLowerCase().endsWith('.svg') || (contentType?.includes('svg') ?? false);
         } else {
           throw new Error(`Direct fetch failed: ${response.status}`);
         }
@@ -40,7 +42,8 @@ export async function imageToBase64(imageUrl: string): Promise<string> {
         if (!response.ok) {
           throw new Error(`Failed to fetch image via proxy: ${response.status}`);
         }
-        isSvg = imageUrl.toLowerCase().endsWith('.svg') || response.headers.get('content-type')?.includes('svg');
+        const contentType = response.headers.get('content-type');
+        isSvg = imageUrl.toLowerCase().endsWith('.svg') || (contentType?.includes('svg') ?? false);
       }
     }
     

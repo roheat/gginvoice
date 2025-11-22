@@ -172,20 +172,14 @@ export const invoiceService = {
   async markInvoicePaid(
     invoiceId: string,
     actorId: string,
-    paymentRef: string,
+    paymentRef?: string,
     amount?: number,
     currency?: string,
     notes?: string
   ): Promise<InvoiceTransitionResult> {
     try {
-      // Validate required fields
-      if (!paymentRef || paymentRef.trim() === "") {
-        return {
-          success: false,
-          error: "paymentRef is required for manual payments",
-          code: "MISSING_REQUIRED_FIELD",
-        };
-      }
+      // Generate default paymentRef if not provided
+      const finalPaymentRef = paymentRef?.trim() || `MANUAL-${Date.now()}`;
 
       const invoice = await db.invoice.findUnique({
         where: { id: invoiceId },
@@ -242,7 +236,7 @@ export const invoiceService = {
             data: {
               status: InvoiceStatus.PAID,
               paidAt: new Date(),
-              paymentRef: paymentRef.trim(),
+              paymentRef: finalPaymentRef,
               paidVia: "manual",
             },
             include: {
@@ -267,7 +261,7 @@ export const invoiceService = {
               invoiceId,
               type: "PAID",
               actorId,
-              ref: paymentRef.trim(),
+              ref: finalPaymentRef,
               notes: eventNotes,
             },
           });

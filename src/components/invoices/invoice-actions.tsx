@@ -26,6 +26,10 @@ interface Invoice {
   deleted: boolean;
   total: number;
   currency: string;
+  client: {
+    name: string | null;
+    email: string | null;
+  }
 }
 
 interface InvoiceActionsProps {
@@ -116,8 +120,7 @@ export function InvoiceActions({
   };
 
   const handleMarkPaid = async () => {
-    if (!canMarkPaid || !paymentRef.trim()) {
-      toast.error("Please enter a payment reference");
+    if (!canMarkPaid) {
       return;
     }
 
@@ -128,7 +131,7 @@ export function InvoiceActions({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: invoice.id,
-          paymentRef: paymentRef.trim(),
+          paymentRef: paymentRef.trim() || undefined,
           notes: paymentNotes || undefined,
         }),
       });
@@ -397,13 +400,13 @@ export function InvoiceActions({
       {activeModal === "send" && (
         <InvoiceActionsModal
           title="Send Invoice"
-          description="Mark this invoice as sent. This will lock financial fields."
+          description="Mark this invoice as sent."
           onClose={closeModal}
         >
           <Alert className="bg-blue-50 border-blue-200">
             <AlertCircle className="h-4 w-4 text-blue-600" />
             <AlertDescription className="text-blue-800">
-              After sending, you can only edit notes and due date. Financial fields will be locked.
+              After sending, ${invoice.client.name} will receive an email with the invoice link.
             </AlertDescription>
           </Alert>
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4">
@@ -435,7 +438,7 @@ export function InvoiceActions({
         >
           <div className="space-y-4">
             <div>
-              <Label htmlFor="payment-ref">Payment Reference *</Label>
+              <Label htmlFor="payment-ref">Payment Reference (optional)</Label>
               <Input
                 id="payment-ref"
                 placeholder="e.g., CHK-12345, TXN-67890"
@@ -458,12 +461,6 @@ export function InvoiceActions({
                 rows={3}
               />
             </div>
-            <Alert className="bg-green-50 border-green-200">
-              <AlertCircle className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800">
-                Amount: {invoice.currency} {Number(invoice.total).toFixed(2)}
-              </AlertDescription>
-            </Alert>
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4">
               <Button
                 variant="outline"
@@ -475,7 +472,7 @@ export function InvoiceActions({
               </Button>
               <Button
                 onClick={handleMarkPaid}
-                disabled={isLoading || !paymentRef.trim()}
+                disabled={isLoading}
                 className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
               >
                 {isLoading ? "Marking..." : "Mark as Paid"}

@@ -115,7 +115,7 @@ export function useInvoiceForm({ initialInvoice, isEditing = false }: UseInvoice
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showNewClientForm, setShowNewClientForm] = useState(false);
   const [stripeConnected, setStripeConnected] = useState(false);
-  const [paypalConnected, setPaypalConnected] = useState(false);
+  const [paypalConnected] = useState(false);
   const [isLoadingPaymentProviders, setIsLoadingPaymentProviders] = useState(true);
   const [validationErrors, setValidationErrors] = useState<{
     clientId?: boolean;

@@ -65,11 +65,11 @@ export async function POST(request: NextRequest) {
       success: true,
       client,
     });
-  } catch (error: any) {
-    console.error("Client creation error:", error);
+  } catch (error) {
+    console.error("Client creation error:", error instanceof Error ? error.message : String(error));
     
     // Handle Prisma unique constraint violation
-    if (error.code === "P2002" && error.meta?.target?.includes("email")) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === "P2002" && 'meta' in error && error.meta && typeof error.meta === 'object' && 'target' in error.meta && Array.isArray(error.meta.target) && error.meta.target.includes("email")) {
       return NextResponse.json(
         {
           success: false,
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
 

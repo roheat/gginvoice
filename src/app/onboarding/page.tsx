@@ -17,6 +17,7 @@ type Step = "company" | "stripe" | "invoice";
 export default function OnboardingPage() {
   const [currentStep, setCurrentStep] = useState<Step>("company");
   const [loading, setLoading] = useState(true);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [steps, setSteps] = useState({
     company: false,
     stripe: false,

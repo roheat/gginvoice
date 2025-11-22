@@ -4,7 +4,6 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import LoginPage from "../login/page";
-import { AuthSkeleton } from "@/components/ui/skeletons/auth-skeleton";
 
 export default function SignupPage() {
   const { data: session, status } = useSession();
@@ -16,11 +15,6 @@ export default function SignupPage() {
       router.push("/invoices");
     }
   }, [status, session, router]);
-
-  // Show loading state while checking session
-  if (status === "loading") {
-    return <AuthSkeleton />;
-  }
 
   // Don't render login form if already authenticated (will redirect)
   if (status === "authenticated") {
