@@ -155,7 +155,7 @@ function SidebarContent({ pathname, onSignOut, session }: SidebarContentProps) {
   return (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="flex items-center h-16 flex-shrink-0 px-4 mt-3">
+      <div className="flex items-center justify-center h-16 flex-shrink-0 px-4 mt-3">
         <div className="relative">
           <Image
             src="/logo-white.svg"
